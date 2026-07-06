@@ -8,8 +8,6 @@ import {
   RotateCcw,
   FlipHorizontal,
   FlipVertical,
-  Move,
-  Trash2,
   Download,
   Loader2,
   CheckCircle,
@@ -21,25 +19,24 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
-  Sun,
   Circle,
-  Sliders,
+  Sun,
+  Move,
   Plus,
   Minus,
-  GripVertical,
 } from 'lucide-react';
 
 const FONT_OPTIONS = [
-  { name: 'Poppins', family: 'font-poppins', label: 'Poppins ExtraBold' },
-  { name: 'Montserrat', family: 'font-montserrat', label: 'Montserrat ExtraBold' },
-  { name: 'Bebas Neue', family: 'font-bebas', label: 'Bebas Neue' },
-  { name: 'Lilita One', family: 'font-lilita', label: 'Lilita One' },
-  { name: 'Fredoka', family: 'font-fredoka', label: 'Fredoka Bold' },
-  { name: 'League Spartan', family: 'font-league', label: 'League Spartan' },
-  { name: 'Anton', family: 'font-anton', label: 'Anton' },
-  { name: 'Outfit', family: 'font-outfit', label: 'Outfit SemiBold' },
-  { name: 'Sora', family: 'font-sora', label: 'Sora Bold' },
-  { name: 'Playfair Display', family: 'font-playfair', label: 'Playfair Display Bold' },
+  { name: 'Poppins', label: 'Poppins ExtraBold' },
+  { name: 'Montserrat', label: 'Montserrat ExtraBold' },
+  { name: 'Bebas Neue', label: 'Bebas Neue' },
+  { name: 'Lilita One', label: 'Lilita One' },
+  { name: 'Fredoka', label: 'Fredoka Bold' },
+  { name: 'League Spartan', label: 'League Spartan' },
+  { name: 'Anton', label: 'Anton' },
+  { name: 'Outfit', label: 'Outfit SemiBold' },
+  { name: 'Sora', label: 'Sora Bold' },
+  { name: 'Playfair Display', label: 'Playfair Display' },
 ];
 
 const COLOR_PRESETS = [
@@ -52,18 +49,15 @@ const COLOR_PRESETS = [
   { name: 'Hitam', color: '#000000' },
   { name: 'Putih', color: '#FFFFFF' },
   { name: 'Royal Blue', color: '#4169E1' },
-  { name: 'Emerald Green', color: '#50C878' },
+  { name: 'Emerald', color: '#50C878' },
 ];
-
-const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/quicktime'];
 
 interface TextPosition {
   x: number;
   y: number;
 }
 
-interface LogoPosition {
+interface LogoSettings {
   x: number;
   y: number;
   scale: number;
@@ -73,198 +67,180 @@ interface LogoPosition {
   flipV: boolean;
 }
 
-const DEFAULT_TEXT_SETTINGS = {
-  fontSize: 32,
-  letterSpacing: 0,
-  lineSpacing: 1.3,
-  opacity: 1,
-  color: '#000000',
-  outline: false,
-  outlineColor: '#FFFFFF',
-  outlineWidth: 2,
-  shadow: false,
-  shadowColor: '#000000',
-  shadowBlur: 4,
-  shadowOpacity: 0.5,
-  alignment: 'center' as 'left' | 'center' | 'right',
-};
+interface TextSettings {
+  fontSize: number;
+  letterSpacing: number;
+  lineSpacing: number;
+  opacity: number;
+  alignment: 'left' | 'center' | 'right';
+  outline: boolean;
+  outlineColor: string;
+  outlineWidth: number;
+  shadow: boolean;
+  shadowColor: string;
+  shadowBlur: number;
+  shadowOpacity: number;
+}
 
 function App() {
+  // Media state
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
-  const [mediaDimensions, setMediaDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const [mediaDimensions, setMediaDimensions] = useState({ width: 0, height: 0 });
 
+  // Logo state
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoSettings, setLogoSettings] = useState<LogoSettings>({
+    x: 10, y: 10, scale: 1, rotation: 0, opacity: 1, flipH: false, flipV: false
+  });
 
+  // Form state
   const [pendampingan, setPendampingan] = useState('');
   const [lokasi, setLokasi] = useState('');
   const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
   const [barisTambahan, setBarisTambahan] = useState('');
 
+  // Style state
   const [selectedFont, setSelectedFont] = useState(0);
   const [selectedColor, setSelectedColor] = useState('#000000');
   const [customColor, setCustomColor] = useState('#000000');
-
-  const [textSettings, setTextSettings] = useState(DEFAULT_TEXT_SETTINGS);
-
-  const [textPosition, setTextPosition] = useState<TextPosition>({ x: 50, y: 80 });
-  const [logoSettings, setLogoSettings] = useState<LogoPosition>({
-    x: 10,
-    y: 10,
-    scale: 1,
-    rotation: 0,
+  const [textSettings, setTextSettings] = useState<TextSettings>({
+    fontSize: 32,
+    letterSpacing: 0,
+    lineSpacing: 1.3,
     opacity: 1,
-    flipH: false,
-    flipV: false,
+    alignment: 'center',
+    outline: false,
+    outlineColor: '#FFFFFF',
+    outlineWidth: 3,
+    shadow: true,
+    shadowColor: '#000000',
+    shadowBlur: 4,
+    shadowOpacity: 0.5,
   });
+  const [textPosition, setTextPosition] = useState<TextPosition>({ x: 50, y: 75 });
 
-  const [isDraggingText, setIsDraggingText] = useState(false);
-  const [isDraggingLogo, setIsDraggingLogo] = useState(false);
+  // UI state
   const [showSettings, setShowSettings] = useState(false);
-
+  const [isDragging, setIsDragging] = useState<'text' | 'logo' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
 
+  // Refs
+  const previewRef = useRef<HTMLDivElement>(null);
+  const mediaRef = useRef<HTMLImageElement | HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const mediaRef = useRef<HTMLVideoElement | HTMLImageElement>(null);
-  const previewContainerRef = useRef<HTMLDivElement>(null);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const logoInputRef = useRef<HTMLInputElement>(null);
-
+  // Cleanup URLs on unmount
   useEffect(() => {
-    if (mediaPreview) {
-      URL.revokeObjectURL(mediaPreview);
-    }
-  }, [mediaPreview]);
+    return () => {
+      if (mediaPreview) URL.revokeObjectURL(mediaPreview);
+      if (logoPreview) URL.revokeObjectURL(logoPreview);
+    };
+  }, []);
 
-  useEffect(() => {
-    if (logoPreview) {
-      URL.revokeObjectURL(logoPreview);
-    }
-  }, [logoPreview]);
-
-  useEffect(() => {
-    setTextSettings(prev => ({ ...prev, color: selectedColor }));
-  }, [selectedColor]);
-
+  // Media upload handler
   const handleMediaUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const isImage = ACCEPTED_IMAGE_TYPES.includes(file.type);
-    const isVideo = ACCEPTED_VIDEO_TYPES.includes(file.type);
+    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith('video/');
 
     if (!isImage && !isVideo) {
-      alert('Format file tidak didukung. Gunakan JPG, JPEG, PNG, WEBP, MP4, atau MOV.');
+      alert('Format tidak didukung. Gunakan JPG, PNG, WEBP, MP4, atau MOV.');
       return;
     }
 
-    URL.revokeObjectURL(mediaPreview || '');
+    if (mediaPreview) URL.revokeObjectURL(mediaPreview);
 
-    const preview = URL.createObjectURL(file);
+    const previewUrl = URL.createObjectURL(file);
     setMediaFile(file);
-    setMediaPreview(preview);
+    setMediaPreview(previewUrl);
     setMediaType(isImage ? 'image' : 'video');
     setDownloadSuccess(false);
 
+    // Get dimensions
     if (isImage) {
       const img = new Image();
-      img.onload = () => {
-        setMediaDimensions({ width: img.width, height: img.height });
-      };
-      img.src = preview;
+      img.onload = () => setMediaDimensions({ width: img.width, height: img.height });
+      img.src = previewUrl;
     } else {
       const video = document.createElement('video');
-      video.onloadedmetadata = () => {
-        setMediaDimensions({ width: video.videoWidth, height: video.videoHeight });
-      };
-      video.src = preview;
+      video.onloadedmetadata = () => setMediaDimensions({ width: video.videoWidth, height: video.videoHeight });
+      video.src = previewUrl;
     }
 
-    setTextPosition({ x: 50, y: 80 });
+    // Reset positions
+    setTextPosition({ x: 50, y: 75 });
     setLogoSettings(prev => ({ ...prev, x: 10, y: 10 }));
   }, [mediaPreview]);
 
+  // Logo upload handler
   const handleLogoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.type !== 'image/png' && file.type !== 'image/jpeg' && file.type !== 'image/webp') {
-      alert('Format logo harus PNG (disarankan transparan), JPG, atau WEBP.');
+    if (!file.type.startsWith('image/')) {
+      alert('Format logo harus gambar (PNG disarankan).');
       return;
     }
 
-    URL.revokeObjectURL(logoPreview || '');
+    if (logoPreview) URL.revokeObjectURL(logoPreview);
 
-    const preview = URL.createObjectURL(file);
+    const previewUrl = URL.createObjectURL(file);
     setLogoFile(file);
-    setLogoPreview(preview);
+    setLogoPreview(previewUrl);
     setLogoSettings({ x: 10, y: 10, scale: 1, rotation: 0, opacity: 1, flipH: false, flipV: false });
   }, [logoPreview]);
 
+  // Remove media
   const removeMedia = useCallback(() => {
-    URL.revokeObjectURL(mediaPreview || '');
+    if (mediaPreview) URL.revokeObjectURL(mediaPreview);
     setMediaFile(null);
     setMediaPreview(null);
     setMediaType(null);
     setMediaDimensions({ width: 0, height: 0 });
   }, [mediaPreview]);
 
+  // Remove logo
   const removeLogo = useCallback(() => {
-    URL.revokeObjectURL(logoPreview || '');
+    if (logoPreview) URL.revokeObjectURL(logoPreview);
     setLogoFile(null);
     setLogoPreview(null);
   }, [logoPreview]);
 
+  // Format date
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('id-ID', {
+    return new Date(dateStr).toLocaleDateString('id-ID', {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
     });
   };
 
-  const getTextLines = () => {
+  // Get text lines
+  const getTextLines = useCallback(() => {
     const lines = [`Pendampingan ${pendampingan}`, lokasi, formatDate(tanggal)];
-    if (barisTambahan.trim()) {
-      lines.push(barisTambahan.trim());
-    }
+    if (barisTambahan.trim()) lines.push(barisTambahan.trim());
     return lines;
-  };
+  }, [pendampingan, lokasi, tanggal, barisTambahan]);
 
+  // Drag handlers
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent, type: 'text' | 'logo') => {
     e.preventDefault();
     e.stopPropagation();
-    if (type === 'text') {
-      setIsDraggingText(true);
-    } else {
-      setIsDraggingLogo(true);
-    }
+    setIsDragging(type);
   }, []);
 
-  const updatePosition = useCallback((clientX: number, clientY: number, type: 'text' | 'logo', rect: DOMRect) => {
-    const x = ((clientX - rect.left) / rect.width) * 100;
-    const y = ((clientY - rect.top) / rect.height) * 100;
+  const handleDragMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDragging || !previewRef.current) return;
 
-    const clampedX = Math.max(0, Math.min(100, x));
-    const clampedY = Math.max(0, Math.min(100, y));
-
-    if (type === 'text') {
-      setTextPosition({ x: clampedX, y: clampedY });
-    } else {
-      setLogoSettings(prev => ({ ...prev, x: clampedX, y: clampedY }));
-    }
-  }, []);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    if (!previewContainerRef.current) return;
-    const rect = previewContainerRef.current.getBoundingClientRect();
-
+    const rect = previewRef.current.getBoundingClientRect();
     let clientX: number, clientY: number;
+
     if ('touches' in e && e.touches.length > 0) {
       clientX = e.touches[0].clientX;
       clientY = e.touches[0].clientY;
@@ -275,48 +251,21 @@ function App() {
       return;
     }
 
-    if (isDraggingText) {
-      updatePosition(clientX, clientY, 'text', rect);
-    } else if (isDraggingLogo) {
-      updatePosition(clientX, clientY, 'logo', rect);
+    const x = Math.max(5, Math.min(95, ((clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(5, Math.min(95, ((clientY - rect.top) / rect.height) * 100));
+
+    if (isDragging === 'text') {
+      setTextPosition({ x, y });
+    } else {
+      setLogoSettings(prev => ({ ...prev, x, y }));
     }
-  }, [isDraggingText, isDraggingLogo, updatePosition]);
+  }, [isDragging]);
 
   const handleDragEnd = useCallback(() => {
-    setIsDraggingText(false);
-    setIsDraggingLogo(false);
+    setIsDragging(null);
   }, []);
 
-  const getTextStyle = useCallback(() => {
-    const font = FONT_OPTIONS[selectedFont];
-    const style: React.CSSProperties = {
-      fontFamily: font.name,
-      fontSize: `${textSettings.fontSize}px`,
-      letterSpacing: `${textSettings.letterSpacing}px`,
-      lineHeight: textSettings.lineSpacing,
-      textAlign: textSettings.alignment,
-      color: textSettings.color,
-      opacity: textSettings.opacity,
-      whiteSpace: 'pre-wrap',
-      wordBreak: 'keep-all',
-    } as React.CSSProperties;
-
-    if (textSettings.shadow) {
-      style.textShadow = `0 0 ${textSettings.shadowBlur}px rgba(${hexToRgb(textSettings.shadowColor)}, ${textSettings.shadowOpacity})`;
-    }
-
-    if (textSettings.outline) {
-      style.WebkitTextStroke = `${textSettings.outlineWidth}px ${textSettings.outlineColor}`;
-    }
-
-    return style;
-  }, [selectedFont, textSettings]);
-
-  const hexToRgb = (hex: string) => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '0, 0, 0';
-  };
-
+  // Download image
   const downloadImage = useCallback(async () => {
     if (!mediaFile || !mediaPreview || !canvasRef.current) return;
 
@@ -326,95 +275,113 @@ function App() {
     try {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Canvas context not available');
+      if (!ctx) throw new Error('Canvas context tidak tersedia');
 
+      // Load image
       const img = new Image();
       img.crossOrigin = 'anonymous';
-
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve();
-        img.onerror = () => reject(new Error('Failed to load image'));
+        img.onerror = () => reject(new Error('Gagal memuat gambar'));
         img.src = mediaPreview;
       });
 
+      // Draw image
       canvas.width = img.width;
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0);
 
+      // Draw logo if exists
       if (logoFile && logoPreview) {
         const logoImg = new Image();
         logoImg.crossOrigin = 'anonymous';
-
         await new Promise<void>((resolve, reject) => {
           logoImg.onload = () => resolve();
-          logoImg.onerror = () => reject(new Error('Failed to load logo'));
+          logoImg.onerror = () => reject(new Error('Gagal memuat logo'));
           logoImg.src = logoPreview;
         });
 
         const logoSize = Math.min(img.width, img.height) * 0.15 * logoSettings.scale;
-        const logoX = (logoSettings.x / 100) * img.width - logoSize / 2;
-        const logoY = (logoSettings.y / 100) * img.height - logoSize / 2;
+        const logoX = (logoSettings.x / 100) * img.width;
+        const logoY = (logoSettings.y / 100) * img.height;
 
         ctx.save();
         ctx.globalAlpha = logoSettings.opacity;
-        ctx.translate(logoX + logoSize / 2, logoY + logoSize / 2);
+        ctx.translate(logoX, logoY);
         ctx.rotate((logoSettings.rotation * Math.PI) / 180);
         ctx.scale(logoSettings.flipH ? -1 : 1, logoSettings.flipV ? -1 : 1);
         ctx.drawImage(logoImg, -logoSize / 2, -logoSize / 2, logoSize, logoSize);
         ctx.restore();
       }
 
+      // Draw text
       const lines = getTextLines();
       if (pendampingan && lokasi) {
         const font = FONT_OPTIONS[selectedFont];
-        const relativeFontSize = (textSettings.fontSize / 400) * img.width;
-
+        const relativeFontSize = Math.max(20, (textSettings.fontSize / 300) * img.width);
         const lineHeight = relativeFontSize * textSettings.lineSpacing;
         const totalHeight = lines.length * lineHeight;
-        const startY = (textPosition.y / 100) * img.height - (totalHeight / 2) + lineHeight * 0.8;
+        const startY = (textPosition.y / 100) * img.height - totalHeight / 2 + lineHeight * 0.8;
 
-        ctx.save();
-        ctx.globalAlpha = textSettings.opacity;
+        const textAlign = textSettings.alignment;
+        let textX: number;
+        if (textAlign === 'left') {
+          textX = img.width * 0.1;
+          ctx.textAlign = 'left';
+        } else if (textAlign === 'right') {
+          textX = img.width * 0.9;
+          ctx.textAlign = 'right';
+        } else {
+          textX = (textPosition.x / 100) * img.width;
+          ctx.textAlign = 'center';
+        }
 
-        const alignment = textSettings.alignment;
-        const xPos = (textPosition.x / 100) * img.width;
-
-        ctx.textAlign = alignment;
         ctx.textBaseline = 'top';
-        ctx.font = `bold ${relativeFontSize}px "${font.name}"`;
+        ctx.font = `bold ${relativeFontSize}px "${font.name}", sans-serif`;
 
-        if (textSettings.shadow) {
-          ctx.shadowColor = textSettings.shadowColor;
-          ctx.shadowBlur = textSettings.shadowBlur * (img.width / 400);
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 0;
-        }
-
-        if (textSettings.outline) {
-          ctx.strokeStyle = textSettings.outlineColor;
-          ctx.lineWidth = textSettings.outlineWidth * (img.width / 400);
-          lines.forEach((line, index) => {
-            ctx.strokeText(line, xPos, startY + index * lineHeight);
-          });
-        }
-
-        ctx.fillStyle = textSettings.color;
+        // Draw each line
         lines.forEach((line, index) => {
-          ctx.fillText(line, xPos, startY + index * lineHeight);
-        });
+          const y = startY + index * lineHeight;
 
-        ctx.restore();
+          // Shadow
+          if (textSettings.shadow) {
+            ctx.save();
+            ctx.globalAlpha = textSettings.shadowOpacity;
+            ctx.shadowColor = textSettings.shadowColor;
+            ctx.shadowBlur = textSettings.shadowBlur * (img.width / 300);
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
+            ctx.fillStyle = textSettings.shadowColor;
+            ctx.fillText(line, textX, y);
+            ctx.restore();
+          }
+
+          // Outline
+          if (textSettings.outline) {
+            ctx.save();
+            ctx.strokeStyle = textSettings.outlineColor;
+            ctx.lineWidth = textSettings.outlineWidth * (img.width / 500);
+            ctx.lineJoin = 'round';
+            ctx.strokeText(line, textX, y);
+            ctx.restore();
+          }
+
+          // Fill text
+          ctx.save();
+          ctx.globalAlpha = textSettings.opacity;
+          ctx.fillStyle = selectedColor;
+          ctx.fillText(line, textX, y);
+          ctx.restore();
+        });
       }
 
+      // Convert to blob and download
       const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((blob) => {
-          if (blob) resolve(blob);
-          else reject(new Error('Failed to create blob'));
-        }, 'image/png', 1.0);
+        canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Gagal membuat file')), 'image/png', 1.0);
       });
 
       const url = URL.createObjectURL(blob);
-      const fileName = `Pendampingan_${pendampingan || 'X'}_${lokasi.replace(/\s+/g, '_') || 'X'}_${tanggal}.png`;
+      const fileName = `Pendampingan_${pendampingan}_${lokasi.replace(/\s+/g, '_')}_${tanggal}.png`;
 
       const a = document.createElement('a');
       a.href = url;
@@ -428,151 +395,115 @@ function App() {
       setTimeout(() => setDownloadSuccess(false), 3000);
     } catch (error) {
       console.error('Download error:', error);
-      alert('Terjadi kesalahan saat memproses gambar. Silakan coba lagi.');
+      alert('Terjadi kesalahan. Silakan coba lagi.');
     } finally {
       setIsProcessing(false);
     }
-  }, [mediaFile, mediaPreview, logoFile, logoPreview, logoSettings, pendampingan, lokasi, tanggal, barisTambahan, selectedFont, textSettings, textPosition, getTextLines]);
+  }, [mediaFile, mediaPreview, logoFile, logoPreview, logoSettings, pendampingan, lokasi, tanggal, getTextLines, selectedFont, textSettings, textPosition, selectedColor]);
 
-  const downloadVideo = useCallback(async () => {
-    if (!mediaFile || !mediaPreview) return;
+  // Download video (screenshot approach)
+  const downloadVideoFrame = useCallback(async () => {
+    if (!mediaPreview || !canvasRef.current || !mediaRef.current) return;
 
     setIsProcessing(true);
     setDownloadSuccess(false);
 
     try {
-      const canvas = document.createElement('canvas');
+      const video = mediaRef.current as HTMLVideoElement;
+      const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Canvas context not available');
+      if (!ctx) throw new Error('Canvas context tidak tersedia');
 
-      const video = document.createElement('video');
-      video.crossOrigin = 'anonymous';
-      video.src = mediaPreview;
-
-      await new Promise<void>((resolve, reject) => {
-        video.onloadedmetadata = () => resolve();
-        video.onerror = () => reject(new Error('Failed to load video'));
-      });
+      // Pause video and capture frame
+      video.pause();
 
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
 
-      const mediaRecorder = new MediaRecorder(canvas.captureStream(30), { mimeType: 'video/webm', videoBitsPerSecond: 8000000 });
-      const chunks: Blob[] = [];
+      // Draw logo
+      if (logoFile && logoPreview) {
+        const logoImg = new Image();
+        logoImg.crossOrigin = 'anonymous';
+        await new Promise<void>((resolve, reject) => {
+          logoImg.onload = () => resolve();
+          logoImg.onerror = () => reject(new Error('Gagal memuat logo'));
+          logoImg.src = logoPreview;
+        });
 
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data);
-      };
+        const logoSize = Math.min(video.videoWidth, video.videoHeight) * 0.15 * logoSettings.scale;
+        const logoX = (logoSettings.x / 100) * video.videoWidth;
+        const logoY = (logoSettings.y / 100) * video.videoHeight;
 
-      await new Promise<void>((resolve) => {
-        mediaRecorder.onstop = resolve;
-      });
-
-      const progressCanvas = document.createElement('canvas');
-      progressCanvas.width = video.videoWidth;
-      progressCanvas.height = video.videoHeight;
-      const progressCtx = progressCanvas.getContext('2d');
-
-      if (progressCtx) {
-        progressCtx.fillStyle = '#rgba(0,0,0,0.8)';
-        progressCtx.fillRect(0, 0, progressCanvas.width, progressCanvas.height);
-        progressCtx.fillStyle = '#FFFFFF';
-        progressCtx.font = 'bold 48px sans-serif';
-        progressCtx.textAlign = 'center';
-        progressCtx.fillText('Memproses video...', progressCanvas.width / 2, progressCanvas.height / 2);
+        ctx.save();
+        ctx.globalAlpha = logoSettings.opacity;
+        ctx.translate(logoX, logoY);
+        ctx.rotate((logoSettings.rotation * Math.PI) / 180);
+        ctx.scale(logoSettings.flipH ? -1 : 1, logoSettings.flipV ? -1 : 1);
+        ctx.drawImage(logoImg, -logoSize / 2, -logoSize / 2, logoSize, logoSize);
+        ctx.restore();
       }
 
-      const startDraw = () => {
-        let startTime = performance.now();
+      // Draw text
+      const lines = getTextLines();
+      if (pendampingan && lokasi) {
+        const font = FONT_OPTIONS[selectedFont];
+        const relativeFontSize = Math.max(20, (textSettings.fontSize / 300) * video.videoWidth);
+        const lineHeight = relativeFontSize * textSettings.lineSpacing;
+        const totalHeight = lines.length * lineHeight;
+        const startY = (textPosition.y / 100) * video.videoHeight - totalHeight / 2 + lineHeight * 0.8;
 
-        const drawFrame = () => {
-          const elapsed = performance.now() - startTime;
-          const drawCtx = canvas.getContext('2d');
-          if (!drawCtx) return;
+        const textAlign = textSettings.alignment;
+        let textX: number;
+        if (textAlign === 'left') {
+          textX = video.videoWidth * 0.1;
+          ctx.textAlign = 'left';
+        } else if (textAlign === 'right') {
+          textX = video.videoWidth * 0.9;
+          ctx.textAlign = 'right';
+        } else {
+          textX = (textPosition.x / 100) * video.videoWidth;
+          ctx.textAlign = 'center';
+        }
 
-          drawCtx.drawImage(video, 0, 0);
+        ctx.textBaseline = 'top';
+        ctx.font = `bold ${relativeFontSize}px "${font.name}", sans-serif`;
 
-          if (logoFile && logoPreview) {
-            const logoImg = new Image();
-            logoImg.src = logoPreview;
-            const logoSize = Math.min(video.videoWidth, video.videoHeight) * 0.15 * logoSettings.scale;
-            const logoX = (logoSettings.x / 100) * video.videoWidth - logoSize / 2;
-            const logoY = (logoSettings.y / 100) * video.videoHeight - logoSize / 2;
+        lines.forEach((line, index) => {
+          const y = startY + index * lineHeight;
 
-            drawCtx.save();
-            drawCtx.globalAlpha = logoSettings.opacity;
-            drawCtx.translate(logoX + logoSize / 2, logoY + logoSize / 2);
-            drawCtx.rotate((logoSettings.rotation * Math.PI) / 180);
-            drawCtx.scale(logoSettings.flipH ? -1 : 1, logoSettings.flipV ? -1 : 1);
-            drawCtx.drawImage(logoImg, -logoSize / 2, -logoSize / 2, logoSize, logoSize);
-            drawCtx.restore();
+          if (textSettings.shadow) {
+            ctx.save();
+            ctx.globalAlpha = textSettings.shadowOpacity;
+            ctx.shadowColor = textSettings.shadowColor;
+            ctx.shadowBlur = textSettings.shadowBlur * (video.videoWidth / 300);
+            ctx.fillStyle = textSettings.shadowColor;
+            ctx.fillText(line, textX, y);
+            ctx.restore();
           }
 
-          const lines = getTextLines();
-          if (pendampingan && lokasi) {
-            const font = FONT_OPTIONS[selectedFont];
-            const relativeFontSize = (textSettings.fontSize / 400) * video.videoWidth;
-            const lineHeight = relativeFontSize * textSettings.lineSpacing;
-            const totalHeight = lines.length * lineHeight;
-            const startY = (textPosition.y / 100) * video.videoHeight - (totalHeight / 2) + lineHeight * 0.8;
-            const xPos = (textPosition.x / 100) * video.videoWidth;
-
-            drawCtx.save();
-            drawCtx.globalAlpha = textSettings.opacity;
-            drawCtx.textAlign = textSettings.alignment;
-            drawCtx.textBaseline = 'top';
-            drawCtx.font = `bold ${relativeFontSize}px "${font.name}"`;
-
-            if (textSettings.shadow) {
-              drawCtx.shadowColor = textSettings.shadowColor;
-              drawCtx.shadowBlur = textSettings.shadowBlur * (video.videoWidth / 400);
-            }
-
-            if (textSettings.outline) {
-              drawCtx.strokeStyle = textSettings.outlineColor;
-              drawCtx.lineWidth = textSettings.outlineWidth * (video.videoWidth / 400);
-              lines.forEach((line, index) => {
-                drawCtx.strokeText(line, xPos, startY + index * lineHeight);
-              });
-            }
-
-            drawCtx.fillStyle = textSettings.color;
-            lines.forEach((line, index) => {
-              drawCtx.fillText(line, xPos, startY + index * lineHeight);
-            });
-
-            drawCtx.restore();
+          if (textSettings.outline) {
+            ctx.save();
+            ctx.strokeStyle = textSettings.outlineColor;
+            ctx.lineWidth = textSettings.outlineWidth * (video.videoWidth / 500);
+            ctx.strokeText(line, textX, y);
+            ctx.restore();
           }
-        };
 
-        video.play();
-        mediaRecorder.start(100);
+          ctx.save();
+          ctx.globalAlpha = textSettings.opacity;
+          ctx.fillStyle = selectedColor;
+          ctx.fillText(line, textX, y);
+          ctx.restore();
+        });
+      }
 
-        const animationLoop = () => {
-          if (!video.paused && !video.ended) {
-            drawFrame();
-            requestAnimationFrame(animationLoop);
-          }
-        };
-
-        animationLoop();
-      };
-
-      video.onended = () => {
-        mediaRecorder.stop();
-      };
-
-      await new Promise<void>((resolve) => {
-        setTimeout(() => {
-          mediaRecorder.onstop = () => {
-            resolve();
-          };
-        }, video.duration * 1000);
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Gagal membuat file')), 'image/png', 1.0);
       });
 
-      const blob = new Blob(chunks, { type: 'video/webm' });
       const url = URL.createObjectURL(blob);
-      const fileName = `Pendampingan_${pendampingan || 'X'}_${lokasi.replace(/\s+/g, '_') || 'X'}_${tanggal}.mp4`;
+      const fileName = `Pendampingan_${pendampingan}_${lokasi.replace(/\s+/g, '_')}_${tanggal}.png`;
 
       const a = document.createElement('a');
       a.href = url;
@@ -585,60 +516,59 @@ function App() {
       setDownloadSuccess(true);
       setTimeout(() => setDownloadSuccess(false), 3000);
     } catch (error) {
-      console.error('Video download error:', error);
-      alert('Fitur download video saat ini dalam pengembangan. Untuk hasil terbaik, gunakan screenshot atau screen recording.');
+      console.error('Download error:', error);
+      alert('Terjadi kesalahan. Silakan coba lagi.');
     } finally {
       setIsProcessing(false);
     }
-  }, [mediaFile, mediaPreview, logoFile, logoPreview, logoSettings, pendampingan, lokasi, tanggal, barisTambahan, selectedFont, textSettings, textPosition, getTextLines]);
+  }, [mediaPreview, logoFile, logoPreview, logoSettings, pendampingan, lokasi, tanggal, getTextLines, selectedFont, textSettings, textPosition, selectedColor]);
 
-  const handleDownload = useCallback(async () => {
-    if (!mediaType) return;
-
+  const handleDownload = useCallback(() => {
     if (mediaType === 'image') {
-      await downloadImage();
-    } else {
-      await downloadVideo();
+      downloadImage();
+    } else if (mediaType === 'video') {
+      downloadVideoFrame();
     }
-  }, [mediaType, downloadImage, downloadVideo]);
+  }, [mediaType, downloadImage, downloadVideoFrame]);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  const handleVideoDrag = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    handleDragStart(e, 'text');
-    if (videoRef.current && !videoRef.current.paused) {
-      videoRef.current.pause();
-    }
-  }, [handleDragStart]);
+  const isFormValid = pendampingan.trim() !== '' && lokasi.trim() !== '';
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
+    <div className="min-h-screen bg-[#E4E4FF]">
+      <canvas ref={canvasRef} className="hidden" />
 
-      <div className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-sm shadow-sm z-40 safe-top">
-        <div className="max-w-md mx-auto px-4 py-3">
-          <h1 className="text-lg font-semibold text-center">
-            <span className="text-primary">Title</span> Generator
-          </h1>
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100">
+        <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-center">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#FB5EA8] to-pink-400 flex items-center justify-center">
+              <Type className="w-4 h-4 text-white" />
+            </div>
+            <h1 className="text-lg font-bold bg-gradient-to-r from-[#FB5EA8] to-pink-500 bg-clip-text text-transparent">
+              Title Generator
+            </h1>
+          </div>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-md mx-auto px-4 pt-16">
-        <div className="py-4 space-y-4">
-          <div className="bg-white rounded-card shadow-card p-4">
-            <h2 className="font-semibold mb-3 flex items-center gap-2 text-sm">
-              <Upload className="w-4 h-4 text-primary" />
-              Langkah 1 — Upload Media
-            </h2>
+      {/* Main Content */}
+      <main className="max-w-md mx-auto px-4 py-6 space-y-4">
 
+        {/* Step 1 - Media Upload */}
+        <section className="bg-white rounded-3xl shadow-lg shadow-gray-200/50 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-[#FB5EA8] text-white text-xs flex items-center justify-center font-bold">1</div>
+            <h2 className="font-semibold text-gray-800">Upload Media</h2>
+          </div>
+
+          <div className="p-4">
             {mediaPreview ? (
-              <div className="relative">
+              <div className="space-y-3">
                 <div
-                  ref={previewContainerRef}
-                  className="relative w-full rounded-xl overflow-hidden bg-gray-100 border border-gray-200 touch-none select-none"
-                  style={{ aspectRatio: mediaDimensions.width && mediaDimensions.height ? `${mediaDimensions.width}/${mediaDimensions.height}` : '16/9' }}
-                  onMouseMove={handleMouseMove}
-                  onTouchMove={handleMouseMove}
+                  ref={previewRef}
+                  className="relative rounded-2xl overflow-hidden bg-gray-900 touch-none select-none"
+                  onMouseMove={handleDragMove}
+                  onTouchMove={handleDragMove}
                   onMouseUp={handleDragEnd}
                   onTouchEnd={handleDragEnd}
                   onMouseLeave={handleDragEnd}
@@ -647,666 +577,632 @@ function App() {
                     <img
                       src={mediaPreview}
                       alt="Preview"
-                      className="w-full h-full object-contain"
+                      className="w-full"
                       draggable={false}
                     />
                   ) : (
                     <video
-                      ref={videoRef}
+                      ref={mediaRef as React.RefObject<HTMLVideoElement>}
                       src={mediaPreview}
-                      className="w-full h-full object-contain"
+                      className="w-full"
                       controls
                       playsInline
                       draggable={false}
                     />
                   )}
 
+                  {/* Text Overlay */}
                   <div
-                    className={`absolute cursor-move select-none ${isDraggingText ? 'opacity-80' : ''}`}
+                    className={`absolute cursor-grab active:cursor-grabbing ${isDragging === 'text' ? 'opacity-80' : ''}`}
                     style={{
                       left: `${textPosition.x}%`,
                       top: `${textPosition.y}%`,
                       transform: 'translate(-50%, -50%)',
                     }}
-                    onMouseDown={(e) => {
-                      if (mediaType === 'image') handleDragStart(e, 'text');
-                    }}
-                    onTouchStart={(e) => {
-                      if (mediaType === 'image') handleDragStart(e, 'text');
-                    }}
+                    onMouseDown={(e) => handleDragStart(e, 'text')}
+                    onTouchStart={(e) => handleDragStart(e, 'text')}
                   >
-                    <div className="flex items-center justify-center mb-1 cursor-grab active:cursor-grabbing">
-                      <GripVertical className="w-4 h-4 text-primary" />
-                    </div>
                     <div
-                      className="text-center px-2"
-                      style={getTextStyle()}
+                      className="text-center whitespace-nowrap px-2"
+                      style={{
+                        fontFamily: `"${FONT_OPTIONS[selectedFont].name}", sans-serif`,
+                        fontSize: `${textSettings.fontSize}px`,
+                        color: selectedColor,
+                        opacity: textSettings.opacity,
+                        textShadow: textSettings.shadow
+                          ? `0 0 ${textSettings.shadowBlur}px rgba(0,0,0,${textSettings.shadowOpacity})`
+                          : 'none',
+                        WebkitTextStroke: textSettings.outline
+                          ? `${textSettings.outlineWidth}px ${textSettings.outlineColor}`
+                          : 'none',
+                        lineHeight: textSettings.lineSpacing,
+                        letterSpacing: `${textSettings.letterSpacing}px`,
+                      }}
                     >
-                      {getTextLines().map((line, index) => (
-                        <div key={index}>{line}</div>
+                      {getTextLines().map((line, i) => (
+                        <div key={i}>{line}</div>
                       ))}
                     </div>
                   </div>
 
+                  {/* Logo Overlay */}
                   {logoPreview && (
                     <div
-                      className={`absolute cursor-move ${isDraggingLogo ? 'opacity-80' : ''}`}
+                      className={`absolute cursor-grab active:cursor-grabbing ${isDragging === 'logo' ? 'opacity-80' : ''}`}
                       style={{
                         left: `${logoSettings.x}%`,
                         top: `${logoSettings.y}%`,
                         transform: `translate(-50%, -50%) rotate(${logoSettings.rotation}deg) scale(${logoSettings.flipH ? -1 : 1}, ${logoSettings.flipV ? -1 : 1}) scale(${logoSettings.scale})`,
                         opacity: logoSettings.opacity,
                       }}
-                      onMouseDown={(e) => {
-                        if (mediaType === 'image') handleDragStart(e, 'logo');
-                      }}
-                      onTouchStart={(e) => {
-                        if (mediaType === 'image') handleDragStart(e, 'logo');
-                      }}
+                      onMouseDown={(e) => handleDragStart(e, 'logo')}
+                      onTouchStart={(e) => handleDragStart(e, 'logo')}
                     >
-                      <img
-                        src={logoPreview}
-                        alt="Logo"
-                        className="w-16 h-16 object-contain pointer-events-none"
-                        draggable={false}
-                      />
-                      <GripVertical className="absolute -top-5 left-1/2 transform -translate-x-1/2 w-3 h-3 text-primary opacity-60" />
+                      <img src={logoPreview} alt="Logo" className="w-16 h-16 object-contain pointer-events-none" draggable={false} />
                     </div>
                   )}
+
+                  {/* Remove Button */}
+                  <button
+                    onClick={removeMedia}
+                    className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-red-500 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
 
-                <button
-                  onClick={removeMedia}
-                  className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full shadow-lg transition-transform active:scale-90"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-
-                <p className="text-xs text-gray-500 mt-2 text-center">
-                  Seret teks untuk mengatur posisi
+                <p className="text-xs text-gray-500 text-center flex items-center justify-center gap-1">
+                  <Move className="w-3 h-3" /> Seret untuk mengatur posisi
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept={`${ACCEPTED_IMAGE_TYPES.join(',')},${ACCEPTED_VIDEO_TYPES.join(',')}`}
-                  onChange={handleMediaUpload}
-                  className="hidden"
-                />
-
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full aspect-square flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-gray-300 hover:border-primary hover:bg-pink-50 transition-all duration-200 active:bg-pink-100"
-                >
-                  <div className="w-16 h-16 rounded-full bg-pink-100 flex items-center justify-center">
-                    <Upload className="w-8 h-8 text-primary" />
+              <div className="space-y-4">
+                <label className="block">
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp,video/mp4,video/quicktime"
+                    onChange={handleMediaUpload}
+                    className="hidden"
+                  />
+                  <div className="aspect-square rounded-2xl border-2 border-dashed border-gray-300 hover:border-[#FB5EA8] hover:bg-pink-50/50 transition-all cursor-pointer flex flex-col items-center justify-center gap-4">
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center">
+                      <Upload className="w-8 h-8 text-[#FB5EA8]" />
+                    </div>
+                    <div className="text-center">
+                      <p className="font-semibold text-gray-700">Ketuk untuk Upload</p>
+                      <p className="text-xs text-gray-500 mt-1">JPG, PNG, WEBP, MP4, MOV</p>
+                    </div>
                   </div>
-                  <span className="text-gray-700 font-medium">Ketuk untuk Upload</span>
-                  <span className="text-xs text-gray-500">JPG, PNG, WEBP, MP4, MOV</span>
-                </button>
+                </label>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gray-50 border border-gray-200 hover:bg-pink-50 hover:border-primary transition-all"
-                  >
-                    <Image className="w-5 h-5 text-gray-600" />
-                    <span className="text-sm font-medium">Upload Foto</span>
-                  </button>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gray-50 border border-gray-200 hover:bg-pink-50 hover:border-primary transition-all"
-                  >
-                    <Video className="w-5 h-5 text-gray-600" />
-                    <span className="text-sm font-medium">Upload Video</span>
-                  </button>
+                  <label className="block">
+                    <input type="file" accept="image/*" onChange={handleMediaUpload} className="hidden" />
+                    <div className="flex flex-col items-center gap-2 py-4 rounded-xl bg-gray-50 hover:bg-pink-50 border border-gray-200 hover:border-[#FB5EA8] cursor-pointer transition-all">
+                      <Image className="w-6 h-6 text-gray-500" />
+                      <span className="text-sm font-medium text-gray-700">Upload Foto</span>
+                    </div>
+                  </label>
+                  <label className="block">
+                    <input type="file" accept="video/*" onChange={handleMediaUpload} className="hidden" />
+                    <div className="flex flex-col items-center gap-2 py-4 rounded-xl bg-gray-50 hover:bg-pink-50 border border-gray-200 hover:border-[#FB5EA8] cursor-pointer transition-all">
+                      <Video className="w-6 h-6 text-gray-500" />
+                      <span className="text-sm font-medium text-gray-700">Upload Video</span>
+                    </div>
+                  </label>
                 </div>
               </div>
             )}
           </div>
+        </section>
 
-          <div className="bg-white rounded-card shadow-card p-4">
-            <h2 className="font-semibold mb-3 flex items-center gap-2 text-sm">
-              <Image className="w-4 h-4 text-primary" />
-              Langkah 2 — Upload Logo (Opsional)
-            </h2>
+        {/* Step 2 - Logo Upload */}
+        <section className="bg-white rounded-3xl shadow-lg shadow-gray-200/50 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-[#FB5EA8] text-white text-xs flex items-center justify-center font-bold">2</div>
+            <h2 className="font-semibold text-gray-800">Upload Logo (Opsional)</h2>
+          </div>
 
+          <div className="p-4">
             {logoPreview ? (
-              <div className="space-y-3">
-                <div className="relative inline-block">
-                  <img
-                    src={logoPreview}
-                    alt="Logo"
-                    className="w-20 h-20 object-contain bg-gray-100 rounded-lg"
-                  />
-                  <button
-                    onClick={removeLogo}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-lg"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="relative">
+                    <img src={logoPreview} alt="Logo" className="w-16 h-16 object-contain bg-gray-100 rounded-xl" />
+                    <button
+                      onClick={removeLogo}
+                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="grid grid-cols-4 gap-2">
                   <div>
-                    <label className="text-xs text-gray-600 mb-1 block">Ukuran</label>
+                    <label className="text-xs text-gray-500">Size</label>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="2"
+                      step="0.1"
+                      value={logoSettings.scale}
+                      onChange={(e) => setLogoSettings(p => ({ ...p, scale: parseFloat(e.target.value) }))}
+                      className="w-full accent-[#FB5EA8] mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Opacity</label>
                     <input
                       type="range"
                       min="0.2"
-                      max="3"
-                      step="0.1"
-                      value={logoSettings.scale}
-                      onChange={(e) => setLogoSettings(prev => ({ ...prev, scale: parseFloat(e.target.value) }))}
-                      className="w-full accent-primary h-2 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-gray-600 mb-1 block">Rotasi</label>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setLogoSettings(prev => ({ ...prev, rotation: prev.rotation - 15 }))}
-                        className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors active:scale-90"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                      </button>
-                      <input
-                        type="range"
-                        min="-180"
-                        max="180"
-                        step="15"
-                        value={logoSettings.rotation}
-                        onChange={(e) => setLogoSettings(prev => ({ ...prev, rotation: parseInt(e.target.value) }))}
-                        className="flex-1 accent-primary h-2 rounded-lg appearance-none cursor-pointer"
-                      />
-                      <button
-                        onClick={() => setLogoSettings(prev => ({ ...prev, rotation: prev.rotation + 15 }))}
-                        className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors active:scale-90"
-                      >
-                        <RotateCw className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-gray-600 mb-1 block">Opacity</label>
-                    <input
-                      type="range"
-                      min="0.1"
                       max="1"
                       step="0.1"
                       value={logoSettings.opacity}
-                      onChange={(e) => setLogoSettings(prev => ({ ...prev, opacity: parseFloat(e.target.value) }))}
-                      className="w-full accent-primary h-2 rounded-lg appearance-none cursor-pointer"
+                      onChange={(e) => setLogoSettings(p => ({ ...p, opacity: parseFloat(e.target.value) }))}
+                      className="w-full accent-[#FB5EA8] mt-1"
                     />
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => setLogoSettings(prev => ({ ...prev, flipH: !prev.flipH }))}
-                      className={`flex items-center justify-center gap-1 py-2 px-3 rounded-lg text-sm transition-all ${logoSettings.flipH ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-                    >
-                      <FlipHorizontal className="w-4 h-4" /> Flip H
-                    </button>
-                    <button
-                      onClick={() => setLogoSettings(prev => ({ ...prev, flipV: !prev.flipV }))}
-                      className={`flex items-center justify-center gap-1 py-2 px-3 rounded-lg text-sm transition-all ${logoSettings.flipV ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-                    >
-                      <FlipVertical className="w-4 h-4" /> Flip V
-                    </button>
+                  <div>
+                    <label className="text-xs text-gray-500">Rotasi</label>
+                    <input
+                      type="range"
+                      min="-180"
+                      max="180"
+                      step="15"
+                      value={logoSettings.rotation}
+                      onChange={(e) => setLogoSettings(p => ({ ...p, rotation: parseInt(e.target.value) }))}
+                      className="w-full accent-[#FB5EA8] mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Flip</label>
+                    <div className="flex gap-1 mt-1">
+                      <button
+                        onClick={() => setLogoSettings(p => ({ ...p, flipH: !p.flipH }))}
+                        className={`flex-1 p-1.5 rounded-lg text-xs ${logoSettings.flipH ? 'bg-[#FB5EA8] text-white' : 'bg-gray-100'}`}
+                      >
+                        <FlipHorizontal className="w-3 h-3 mx-auto" />
+                      </button>
+                      <button
+                        onClick={() => setLogoSettings(p => ({ ...p, flipV: !p.flipV }))}
+                        className={`flex-1 p-1.5 rounded-lg text-xs ${logoSettings.flipV ? 'bg-[#FB5EA8] text-white' : 'bg-gray-100'}`}
+                      >
+                        <FlipVertical className="w-3 h-3 mx-auto" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             ) : (
-              <div>
-                <input
-                  ref={logoInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  onChange={handleLogoUpload}
-                  className="hidden"
-                />
-
-                <button
-                  onClick={() => logoInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gray-50 border border-gray-200 hover:bg-pink-50 hover:border-primary transition-all"
-                >
-                  <Image className="w-5 h-5 text-gray-600" />
-                  <span className="text-sm font-medium">Upload Logo / Watermark</span>
-                </button>
-
-                <p className="text-xs text-gray-500 mt-2 text-center">
-                  PNG transparan disarankan
-                </p>
-              </div>
+              <label className="block">
+                <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleLogoUpload} className="hidden" />
+                <div className="flex items-center justify-center gap-3 py-4 rounded-xl bg-gray-50 hover:bg-pink-50 border border-gray-200 hover:border-[#FB5EA8] cursor-pointer transition-all">
+                  <Image className="w-5 h-5 text-gray-500" />
+                  <span className="text-sm font-medium text-gray-700">Upload Logo / Watermark</span>
+                </div>
+                <p className="text-xs text-gray-500 text-center mt-2">PNG transparan disarankan</p>
+              </label>
             )}
           </div>
+        </section>
 
-          <div className="bg-white rounded-card shadow-card p-4">
-            <h2 className="font-semibold mb-3 flex items-center gap-2 text-sm">
-              <Type className="w-4 h-4 text-primary" />
-              Langkah 3 — Isi Judul
-            </h2>
-
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-gray-600 mb-1 block">
-                  Pendampingan Apa? <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={pendampingan}
-                  onChange={(e) => setPendampingan(e.target.value)}
-                  placeholder="Contoh: RANAP, Rawat Jalan, MCU..."
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-gray-600 mb-1 block">
-                  Di Mana? <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={lokasi}
-                  onChange={(e) => setLokasi(e.target.value)}
-                  placeholder="Contoh: RSUD Dr. Moewardi"
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-gray-600 mb-1 block">
-                  Tanggal <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={tanggal}
-                  onChange={(e) => setTanggal(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-gray-600 mb-1 block">
-                  Baris Tambahan (Opsional)
-                </label>
-                <input
-                  type="text"
-                  value={barisTambahan}
-                  onChange={(e) => setBarisTambahan(e.target.value)}
-                  placeholder="Contoh: Shift Malam, Durasi 24 Jam..."
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
-                />
-              </div>
-            </div>
+        {/* Step 3 - Form */}
+        <section className="bg-white rounded-3xl shadow-lg shadow-gray-200/50 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-[#FB5EA8] text-white text-xs flex items-center justify-center font-bold">3</div>
+            <h2 className="font-semibold text-gray-800">Isi Judul</h2>
           </div>
 
-          <div className="bg-white rounded-card shadow-card p-4">
-            <h2 className="font-semibold mb-3 flex items-center gap-2 text-sm">
-              <Type className="w-4 h-4 text-primary" />
-              Langkah 4 — Pilihan Font
-            </h2>
+          <div className="p-4 space-y-4">
+            <div>
+              <label className="text-sm text-gray-600 mb-1.5 flex items-center gap-1">
+                Pendampingan Apa? <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={pendampingan}
+                onChange={(e) => setPendampingan(e.target.value)}
+                placeholder="Contoh: RANAP, Rawat Jalan, MCU, Homecare..."
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#FB5EA8] focus:ring-2 focus:ring-pink-100 outline-none transition-all text-sm"
+              />
+            </div>
 
+            <div>
+              <label className="text-sm text-gray-600 mb-1.5 flex items-center gap-1">
+                Di Mana? <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={lokasi}
+                onChange={(e) => setLokasi(e.target.value)}
+                placeholder="Contoh: RSUD Dr. Moewardi"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#FB5EA8] focus:ring-2 focus:ring-pink-100 outline-none transition-all text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm text-gray-600 mb-1.5 flex items-center gap-1">
+                Tanggal <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={tanggal}
+                onChange={(e) => setTanggal(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#FB5EA8] focus:ring-2 focus:ring-pink-100 outline-none transition-all text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm text-gray-600 mb-1.5">Baris Tambahan (Opsional)</label>
+              <input
+                type="text"
+                value={barisTambahan}
+                onChange={(e) => setBarisTambahan(e.target.value)}
+                placeholder="Contoh: Shift Malam, ICU, Durasi 24 Jam..."
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#FB5EA8] focus:ring-2 focus:ring-pink-100 outline-none transition-all text-sm"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Step 4 - Fonts */}
+        <section className="bg-white rounded-3xl shadow-lg shadow-gray-200/50 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-[#FB5EA8] text-white text-xs flex items-center justify-center font-bold">4</div>
+            <h2 className="font-semibold text-gray-800">Pilihan Font</h2>
+          </div>
+
+          <div className="p-4">
             <div className="grid grid-cols-2 gap-2">
               {FONT_OPTIONS.map((font, index) => (
                 <button
                   key={index}
                   onClick={() => setSelectedFont(index)}
                   className={`px-3 py-2.5 rounded-xl text-sm transition-all ${selectedFont === index
-                    ? 'bg-primary text-white shadow-lg shadow-primary/30'
-                    : 'bg-gray-50 border border-gray-200 hover:bg-pink-50 hover:border-primary'
+                    ? 'bg-[#FB5EA8] text-white shadow-lg shadow-pink-200'
+                    : 'bg-gray-50 border border-gray-200 hover:bg-pink-50 hover:border-[#FB5EA8]'
                     }`}
-                  style={{ fontFamily: font.name }}
+                  style={{ fontFamily: `"${font.name}", sans-serif` }}
                 >
                   {font.label}
                 </button>
               ))}
             </div>
           </div>
+        </section>
 
-          <div className="bg-white rounded-card shadow-card p-4">
-            <h2 className="font-semibold mb-3 flex items-center gap-2 text-sm">
-              <Palette className="w-4 h-4 text-primary" />
-              Langkah 5 — Warna
-            </h2>
+        {/* Step 5 - Colors */}
+        <section className="bg-white rounded-3xl shadow-lg shadow-gray-200/50 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-[#FB5EA8] text-white text-xs flex items-center justify-center font-bold">5</div>
+            <h2 className="font-semibold text-gray-800">Warna</h2>
+          </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-gray-500 mb-2 block">Pastel</label>
-                <div className="flex gap-2">
-                  {COLOR_PRESETS.slice(0, 5).map((preset, index) => (
-                    <button
-                      key={index}
-                      onClick={() => {
-                        setSelectedColor(preset.color);
-                        setCustomColor(preset.color);
-                      }}
-                      className={`w-10 h-10 rounded-full border-2 transition-transform active:scale-90 ${selectedColor === preset.color
-                        ? 'border-primary border-3 ring-2 ring-primary/30 scale-110'
-                        : 'border-gray-200'
-                        }`}
-                      style={{ backgroundColor: preset.color }}
-                      title={preset.name}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs text-gray-500 mb-2 block">Bold</label>
-                <div className="flex gap-2">
-                  {COLOR_PRESETS.slice(5).map((preset, index) => (
-                    <button
-                      key={index}
-                      onClick={() => {
-                        setSelectedColor(preset.color);
-                        setCustomColor(preset.color);
-                      }}
-                      className={`w-10 h-10 rounded-full border-2 transition-transform active:scale-90 ${selectedColor === preset.color
-                        ? 'border-primary border-3 ring-2 ring-primary/30 scale-110'
-                        : 'border-gray-200'
-                        } ${preset.color === '#FFFFFF' ? 'bg-white border-gray-300' : ''}`}
-                      style={{ backgroundColor: preset.color }}
-                      title={preset.name}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs text-gray-500 mb-2 block">Custom Color</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={customColor}
-                    onChange={(e) => {
-                      setCustomColor(e.target.value);
-                      setSelectedColor(e.target.value);
+          <div className="p-4 space-y-4">
+            <div>
+              <label className="text-xs text-gray-500 mb-2 block">Pastel</label>
+              <div className="flex gap-2 flex-wrap">
+                {COLOR_PRESETS.slice(0, 5).map((preset, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setSelectedColor(preset.color);
+                      setCustomColor(preset.color);
                     }}
-                    className="w-12 h-12 rounded-lg cursor-pointer border border-gray-200 overflow-hidden"
+                    className={`w-10 h-10 rounded-full transition-all ${selectedColor === preset.color ? 'ring-2 ring-offset-2 ring-[#FB5EA8] scale-110' : 'hover:scale-105'}`}
+                    style={{ backgroundColor: preset.color }}
+                    title={preset.name}
                   />
-                  <input
-                    type="text"
-                    value={customColor.toUpperCase()}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
-                        setCustomColor(value);
-                        setSelectedColor(value);
-                      }
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-500 mb-2 block">Bold</label>
+              <div className="flex gap-2 flex-wrap">
+                {COLOR_PRESETS.slice(5).map((preset, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setSelectedColor(preset.color);
+                      setCustomColor(preset.color);
                     }}
-                    className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 font-mono text-sm uppercase"
-                    placeholder="#000000"
+                    className={`w-10 h-10 rounded-full transition-all border ${selectedColor === preset.color ? 'ring-2 ring-offset-2 ring-[#FB5EA8] scale-110' : 'hover:scale-105'} ${preset.color === '#FFFFFF' ? 'border-gray-300' : 'border-transparent'}`}
+                    style={{ backgroundColor: preset.color }}
+                    title={preset.name}
                   />
-                </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-500 mb-2 block">Custom</label>
+              <div className="flex gap-2">
+                <input
+                  type="color"
+                  value={customColor}
+                  onChange={(e) => {
+                    setCustomColor(e.target.value);
+                    setSelectedColor(e.target.value);
+                  }}
+                  className="w-12 h-12 rounded-xl cursor-pointer border-0 overflow-hidden"
+                />
+                <input
+                  type="text"
+                  value={customColor.toUpperCase()}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                      setCustomColor(val);
+                      setSelectedColor(val);
+                    }
+                  }}
+                  className="flex-1 px-3 py-2 rounded-xl border border-gray-200 font-mono text-sm uppercase"
+                />
               </div>
             </div>
           </div>
+        </section>
 
-          <div className="bg-white rounded-card shadow-card overflow-hidden">
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className="w-full p-4 flex items-center justify-between text-left"
-            >
-              <h2 className="font-semibold flex items-center gap-2 text-sm">
-                <Settings className="w-4 h-4 text-primary" />
-                Langkah 6 — Pengaturan
-              </h2>
-              {showSettings ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-            </button>
+        {/* Step 6 - Settings */}
+        <section className="bg-white rounded-3xl shadow-lg shadow-gray-200/50 overflow-hidden">
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="w-full px-4 py-3 flex items-center justify-between border-b border-gray-100"
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-[#FB5EA8] text-white text-xs flex items-center justify-center font-bold">6</div>
+              <h2 className="font-semibold text-gray-800">Pengaturan</h2>
+            </div>
+            {showSettings ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+          </button>
 
-            {showSettings && (
-              <div className="border-t border-gray-100 p-4 space-y-4">
-                <div>
-                  <label className="text-xs text-gray-600 mb-1 flex items-center justify-between">
-                    <span>Ukuran Font</span>
-                    <span className="font-medium">{textSettings.fontSize}px</span>
-                  </label>
-                  <input
-                    type="range"
-                    min="16"
-                    max="72"
-                    step="2"
-                    value={textSettings.fontSize}
-                    onChange={(e) => setTextSettings(prev => ({ ...prev, fontSize: parseInt(e.target.value) }))}
-                    className="w-full accent-primary h-2 rounded-lg appearance-none cursor-pointer"
-                  />
+          {showSettings && (
+            <div className="p-4 space-y-5">
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-600">Ukuran Font</span>
+                  <span className="font-medium text-[#FB5EA8]">{textSettings.fontSize}px</span>
                 </div>
+                <input
+                  type="range"
+                  min="16"
+                  max="72"
+                  step="2"
+                  value={textSettings.fontSize}
+                  onChange={(e) => setTextSettings(p => ({ ...p, fontSize: parseInt(e.target.value) }))}
+                  className="w-full accent-[#FB5EA8]"
+                />
+              </div>
 
-                <div>
-                  <label className="text-xs text-gray-600 mb-1 flex items-center justify-between">
-                    <span>Letter Spacing</span>
-                    <span className="font-medium">{textSettings.letterSpacing}px</span>
-                  </label>
-                  <input
-                    type="range"
-                    min="-2"
-                    max="10"
-                    step="0.5"
-                    value={textSettings.letterSpacing}
-                    onChange={(e) => setTextSettings(prev => ({ ...prev, letterSpacing: parseFloat(e.target.value) }))}
-                    className="w-full accent-primary h-2 rounded-lg appearance-none cursor-pointer"
-                  />
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-600">Letter Spacing</span>
+                  <span className="font-medium">{textSettings.letterSpacing}px</span>
                 </div>
+                <input
+                  type="range"
+                  min="-2"
+                  max="10"
+                  step="0.5"
+                  value={textSettings.letterSpacing}
+                  onChange={(e) => setTextSettings(p => ({ ...p, letterSpacing: parseFloat(e.target.value) }))}
+                  className="w-full accent-[#FB5EA8]"
+                />
+              </div>
 
-                <div>
-                  <label className="text-xs text-gray-600 mb-1 flex items-center justify-between">
-                    <span>Line Spacing</span>
-                    <span className="font-medium">{textSettings.lineSpacing.toFixed(1)}</span>
-                  </label>
-                  <input
-                    type="range"
-                    min="1"
-                    max="2.5"
-                    step="0.1"
-                    value={textSettings.lineSpacing}
-                    onChange={(e) => setTextSettings(prev => ({ ...prev, lineSpacing: parseFloat(e.target.value) }))}
-                    className="w-full accent-primary h-2 rounded-lg appearance-none cursor-pointer"
-                  />
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-600">Line Spacing</span>
+                  <span className="font-medium">{textSettings.lineSpacing.toFixed(1)}</span>
                 </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="2.5"
+                  step="0.1"
+                  value={textSettings.lineSpacing}
+                  onChange={(e) => setTextSettings(p => ({ ...p, lineSpacing: parseFloat(e.target.value) }))}
+                  className="w-full accent-[#FB5EA8]"
+                />
+              </div>
 
-                <div>
-                  <label className="text-xs text-gray-600 mb-1 flex items-center justify-between">
-                    <span>Opacity</span>
-                    <span className="font-medium">{Math.round(textSettings.opacity * 100)}%</span>
-                  </label>
-                  <input
-                    type="range"
-                    min="0.1"
-                    max="1"
-                    step="0.1"
-                    value={textSettings.opacity}
-                    onChange={(e) => setTextSettings(prev => ({ ...prev, opacity: parseFloat(e.target.value) }))}
-                    className="w-full accent-primary h-2 rounded-lg appearance-none cursor-pointer"
-                  />
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-600">Opacity</span>
+                  <span className="font-medium">{Math.round(textSettings.opacity * 100)}%</span>
                 </div>
+                <input
+                  type="range"
+                  min="0.2"
+                  max="1"
+                  step="0.1"
+                  value={textSettings.opacity}
+                  onChange={(e) => setTextSettings(p => ({ ...p, opacity: parseFloat(e.target.value) }))}
+                  className="w-full accent-[#FB5EA8]"
+                />
+              </div>
 
-                <div>
-                  <label className="text-xs text-gray-500 mb-2 block">Alignment</label>
-                  <div className="flex gap-2">
+              <div>
+                <label className="text-sm text-gray-600 mb-2 block">Alignment</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: 'left', Icon: AlignLeft },
+                    { value: 'center', Icon: AlignCenter },
+                    { value: 'right', Icon: AlignRight },
+                  ].map(({ value, Icon }) => (
                     <button
-                      onClick={() => setTextSettings(prev => ({ ...prev, alignment: 'left' }))}
-                      className={`flex-1 flex items-center justify-center py-2 rounded-xl transition-all ${textSettings.alignment === 'left' ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-                    >
-                      <AlignLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setTextSettings(prev => ({ ...prev, alignment: 'center' }))}
-                      className={`flex-1 flex items-center justify-center py-2 rounded-xl transition-all ${textSettings.alignment === 'center' ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-                    >
-                      <AlignCenter className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setTextSettings(prev => ({ ...prev, alignment: 'right' }))}
-                      className={`flex-1 flex items-center justify-center py-2 rounded-xl transition-all ${textSettings.alignment === 'right' ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-                    >
-                      <AlignRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-100 pt-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="text-xs text-gray-600 flex items-center gap-2">
-                      <Circle className="w-3 h-3" />
-                      Outline
-                    </label>
-                    <button
-                      onClick={() => setTextSettings(prev => ({ ...prev, outline: !prev.outline }))}
-                      className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${textSettings.outline
-                        ? 'bg-primary text-white'
-                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                      key={value}
+                      onClick={() => setTextSettings(p => ({ ...p, alignment: value as 'left' | 'center' | 'right' }))}
+                      className={`py-2.5 rounded-xl flex justify-center transition-all ${textSettings.alignment === value
+                        ? 'bg-[#FB5EA8] text-white'
+                        : 'bg-gray-100 hover:bg-gray-200'
                         }`}
                     >
-                      {textSettings.outline ? 'ON' : 'OFF'}
+                      <Icon className="w-5 h-5" />
                     </button>
-                  </div>
-
-                  {textSettings.outline && (
-                    <div className="space-y-3 pl-2 border-l-2 border-gray-100">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500">Warna:</span>
-                        <input
-                          type="color"
-                          value={textSettings.outlineColor}
-                          onChange={(e) => setTextSettings(prev => ({ ...prev, outlineColor: e.target.value }))}
-                          className="w-8 h-8 rounded-lg cursor-pointer border border-gray-200 overflow-hidden"
-                        />
-                        <input
-                          type="text"
-                          value={textSettings.outlineColor.toUpperCase()}
-                          onChange={(e) => {
-                            if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
-                              setTextSettings(prev => ({ ...prev, outlineColor: e.target.value }));
-                            }
-                          }}
-                          className="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 font-mono text-xs uppercase"
-                        />
-                      </div>
-
-                      <div>
-                        <span className="text-xs text-gray-500">Ketebalan: {textSettings.outlineWidth}px</span>
-                        <input
-                          type="range"
-                          min="1"
-                          max="8"
-                          step="0.5"
-                          value={textSettings.outlineWidth}
-                          onChange={(e) => setTextSettings(prev => ({ ...prev, outlineWidth: parseFloat(e.target.value) }))}
-                          className="w-full accent-primary h-2 rounded-lg appearance-none cursor-pointer mt-1"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="border-t border-gray-100 pt-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="text-xs text-gray-600 flex items-center gap-2">
-                      <Sun className="w-3 h-3" />
-                      Shadow
-                    </label>
-                    <button
-                      onClick={() => setTextSettings(prev => ({ ...prev, shadow: !prev.shadow }))}
-                      className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${textSettings.shadow
-                        ? 'bg-primary text-white'
-                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                        }`}
-                    >
-                      {textSettings.shadow ? 'ON' : 'OFF'}
-                    </button>
-                  </div>
-
-                  {textSettings.shadow && (
-                    <div className="space-y-3 pl-2 border-l-2 border-gray-100">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500">Warna:</span>
-                        <input
-                          type="color"
-                          value={textSettings.shadowColor}
-                          onChange={(e) => setTextSettings(prev => ({ ...prev, shadowColor: e.target.value }))}
-                          className="w-8 h-8 rounded-lg cursor-pointer border border-gray-200 overflow-hidden"
-                        />
-                        <input
-                          type="text"
-                          value={textSettings.shadowColor.toUpperCase()}
-                          onChange={(e) => {
-                            if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
-                              setTextSettings(prev => ({ ...prev, shadowColor: e.target.value }));
-                            }
-                          }}
-                          className="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 font-mono text-xs uppercase"
-                        />
-                      </div>
-
-                      <div>
-                        <span className="text-xs text-gray-500">Blur: {textSettings.shadowBlur}px</span>
-                        <input
-                          type="range"
-                          min="0"
-                          max="20"
-                          step="1"
-                          value={textSettings.shadowBlur}
-                          onChange={(e) => setTextSettings(prev => ({ ...prev, shadowBlur: parseInt(e.target.value) }))}
-                          className="w-full accent-primary h-2 rounded-lg appearance-none cursor-pointer mt-1"
-                        />
-                      </div>
-
-                      <div>
-                        <span className="text-xs text-gray-500">Opacity: {Math.round(textSettings.shadowOpacity * 100)}%</span>
-                        <input
-                          type="range"
-                          min="0.1"
-                          max="1"
-                          step="0.1"
-                          value={textSettings.shadowOpacity}
-                          onChange={(e) => setTextSettings(prev => ({ ...prev, shadowOpacity: parseFloat(e.target.value) }))}
-                          className="w-full accent-primary h-2 rounded-lg appearance-none cursor-pointer mt-1"
-                        />
-                      </div>
-                    </div>
-                  )}
+                  ))}
                 </div>
               </div>
-            )}
-          </div>
 
-          {mediaPreview && (
-            <button
-              onClick={handleDownload}
-              disabled={isProcessing || !pendampingan || !lokasi}
-              className={`w-full py-4 px-6 rounded-card font-semibold text-lg flex items-center justify-center gap-3 transition-all ${isProcessing
-                ? 'bg-gray-400 cursor-not-allowed'
-                : downloadSuccess
-                  ? 'bg-green-500 text-white'
-                  : !pendampingan || !lokasi
-                    ? 'bg-gray-300 cursor-not-allowed text-gray-500'
-                    : 'bg-primary text-white hover:bg-pink-600 active:scale-[0.98] shadow-lg shadow-primary/30'
-                }`}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Memproses...
-                </>
-              ) : downloadSuccess ? (
-                <>
-                  <CheckCircle className="w-5 h-5" />
-                  Berhasil! File Telah Diunduh
-                </>
-              ) : (
-                <>
-                  <Download className="w-5 h-5" />
-                  Download Hasil
-                </>
-              )}
-            </button>
+              {/* Outline */}
+              <div className="pt-4 border-t border-gray-100">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm text-gray-600 flex items-center gap-2">
+                    <Circle className="w-4 h-4" /> Outline
+                  </label>
+                  <button
+                    onClick={() => setTextSettings(p => ({ ...p, outline: !p.outline }))}
+                    className={`px-5 py-1.5 rounded-full text-xs font-semibold transition-all ${textSettings.outline
+                      ? 'bg-[#FB5EA8] text-white'
+                      : 'bg-gray-200 text-gray-600'
+                      }`}
+                  >
+                    {textSettings.outline ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+
+                {textSettings.outline && (
+                  <div className="pl-4 border-l-2 border-gray-200 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500">Warna</span>
+                      <input
+                        type="color"
+                        value={textSettings.outlineColor}
+                        onChange={(e) => setTextSettings(p => ({ ...p, outlineColor: e.target.value }))}
+                        className="w-8 h-8 rounded-lg cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={textSettings.outlineColor.toUpperCase()}
+                        onChange={(e) => /^#[0-9A-Fa-f]{6}$/.test(e.target.value) && setTextSettings(p => ({ ...p, outlineColor: e.target.value }))}
+                        className="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 font-mono text-xs"
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-gray-500">Ketebalan</span>
+                      <span>{textSettings.outlineWidth}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      step="0.5"
+                      value={textSettings.outlineWidth}
+                      onChange={(e) => setTextSettings(p => ({ ...p, outlineWidth: parseFloat(e.target.value) }))}
+                      className="w-full accent-[#FB5EA8]"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Shadow */}
+              <div className="pt-4 border-t border-gray-100">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm text-gray-600 flex items-center gap-2">
+                    <Sun className="w-4 h-4" /> Shadow
+                  </label>
+                  <button
+                    onClick={() => setTextSettings(p => ({ ...p, shadow: !p.shadow }))}
+                    className={`px-5 py-1.5 rounded-full text-xs font-semibold transition-all ${textSettings.shadow
+                      ? 'bg-[#FB5EA8] text-white'
+                      : 'bg-gray-200 text-gray-600'
+                      }`}
+                  >
+                    {textSettings.shadow ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+
+                {textSettings.shadow && (
+                  <div className="pl-4 border-l-2 border-gray-200 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500">Warna</span>
+                      <input
+                        type="color"
+                        value={textSettings.shadowColor}
+                        onChange={(e) => setTextSettings(p => ({ ...p, shadowColor: e.target.value }))}
+                        className="w-8 h-8 rounded-lg cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={textSettings.shadowColor.toUpperCase()}
+                        onChange={(e) => /^#[0-9A-Fa-f]{6}$/.test(e.target.value) && setTextSettings(p => ({ ...p, shadowColor: e.target.value }))}
+                        className="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 font-mono text-xs"
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-gray-500">Blur</span>
+                      <span>{textSettings.shadowBlur}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="20"
+                      step="1"
+                      value={textSettings.shadowBlur}
+                      onChange={(e) => setTextSettings(p => ({ ...p, shadowBlur: parseInt(e.target.value) }))}
+                      className="w-full accent-[#FB5EA8]"
+                    />
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-gray-500">Opacity</span>
+                      <span>{Math.round(textSettings.shadowOpacity * 100)}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="1"
+                      step="0.1"
+                      value={textSettings.shadowOpacity}
+                      onChange={(e) => setTextSettings(p => ({ ...p, shadowOpacity: parseFloat(e.target.value) }))}
+                      className="w-full accent-[#FB5EA8]"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
           )}
-        </div>
-      </div>
+        </section>
+
+        {/* Download Button */}
+        {mediaPreview && (
+          <button
+            onClick={handleDownload}
+            disabled={isProcessing || !isFormValid}
+            className={`w-full py-4 rounded-2xl font-semibold text-lg flex items-center justify-center gap-3 transition-all ${isProcessing
+              ? 'bg-gray-400 cursor-not-allowed'
+              : downloadSuccess
+                ? 'bg-green-500 text-white'
+                : !isFormValid
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-[#FB5EA8] text-white hover:bg-pink-600 active:scale-[0.98] shadow-xl shadow-pink-200/50'
+              }`}
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Memproses...
+              </>
+            ) : downloadSuccess ? (
+              <>
+                <CheckCircle className="w-5 h-5" />
+                Berhasil! File Terunduh
+              </>
+            ) : (
+              <>
+                <Download className="w-5 h-5" />
+                Download Hasil
+              </>
+            )}
+          </button>
+        )}
+
+        {!isFormValid && mediaPreview && (
+          <p className="text-xs text-red-500 text-center">
+            Harap isi "Pendampingan Apa?" dan "Di Mana?" untuk mengaktifkan download
+          </p>
+        )}
+      </main>
     </div>
   );
 }

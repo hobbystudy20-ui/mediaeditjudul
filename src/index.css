@@ -12,12 +12,28 @@ html {
 }
 
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior: none;
+  background: #E4E4FF;
 }
 
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #FB5EA8;
+  border-radius: 10px;
+}
+
+/* Color picker */
 input[type="color"] {
   -webkit-appearance: none;
   border: none;
@@ -30,34 +46,34 @@ input[type="color"]::-webkit-color-swatch-wrapper {
 
 input[type="color"]::-webkit-color-swatch {
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
 }
 
+/* Date picker */
 input[type="date"]::-webkit-calendar-picker-indicator {
   opacity: 0.6;
   cursor: pointer;
+  border-radius: 4px;
 }
 
-input[type="file"] {
-  display: none;
-}
-
+/* Range slider */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
   cursor: pointer;
+  height: 24px;
 }
 
 input[type="range"]::-webkit-slider-track {
-  background: #f0f0f0;
-  height: 8px;
+  background: #E5E7EB;
+  height: 6px;
   border-radius: 9999px;
 }
 
 input[type="range"]::-moz-range-track {
-  background: #f0f0f0;
-  height: 8px;
+  background: #E5E7EB;
+  height: 6px;
   border-radius: 9999px;
 }
 
@@ -68,9 +84,10 @@ input[type="range"]::-webkit-slider-thumb {
   height: 20px;
   border-radius: 50%;
   background: #FB5EA8;
-  margin-top: -6px;
-  box-shadow: 0 2px 6px rgba(251, 94, 168, 0.4);
+  margin-top: -7px;
+  box-shadow: 0 2px 8px rgba(251, 94, 168, 0.4);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  border: 3px solid white;
 }
 
 input[type="range"]::-moz-range-thumb {
@@ -78,33 +95,45 @@ input[type="range"]::-moz-range-thumb {
   height: 20px;
   border-radius: 50%;
   background: #FB5EA8;
-  border: none;
-  box-shadow: 0 2px 6px rgba(251, 94, 168, 0.4);
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(251, 94, 168, 0.4);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-input[type="range"]::-webkit-slider-thumb:active {
-  transform: scale(1.1);
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
   box-shadow: 0 4px 12px rgba(251, 94, 168, 0.5);
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(251, 94, 168, 0.5);
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+  transform: scale(1.2);
 }
 
 input[type="range"]::-moz-range-thumb:active {
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(251, 94, 168, 0.5);
+  transform: scale(1.2);
 }
 
-.safe-top {
-  padding-top: max(env(safe-area-inset-top), 12px);
+/* Touch actions */
+.touch-none {
+  touch-action: none;
 }
 
-.safe-bottom {
-  padding-bottom: max(env(safe-area-inset-bottom), 24px);
+.select-none {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.3s ease forwards;
+/* Selection */
+::selection {
+  background-color: rgba(251, 94, 168, 0.3);
 }
 
+/* Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -116,15 +145,49 @@ input[type="range"]::-moz-range-thumb:active {
   }
 }
 
-.touch-none {
-  touch-action: none;
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
 }
 
-.select-none {
-  -webkit-user-select: none;
-  user-select: none;
+.animate-fade-in {
+  animation: fadeIn 0.3s ease forwards;
 }
 
-::selection {
-  background-color: rgba(251, 94, 168, 0.3);
+.animate-pulse-soft {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Focus states */
+input:focus {
+  outline: none;
+}
+
+input[type="text"]:focus,
+input[type="date"]:focus {
+  border-color: #FB5EA8;
+  box-shadow: 0 0 0 3px rgba(251, 94, 168, 0.15);
+}
+
+/* Button transitions */
+button {
+  transition: all 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+/* Card hover effects */
+section {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+section:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 40px rgba(251, 94, 168, 0.15);
 }
