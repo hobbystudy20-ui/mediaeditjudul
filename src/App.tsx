@@ -22,8 +22,7 @@ import {
   Circle,
   Sun,
   Move,
-  Plus,
-  Minus,
+  Eye,
 } from 'lucide-react';
 
 const FONT_OPTIONS = [
@@ -130,6 +129,7 @@ function App() {
 
   // Refs
   const previewRef = useRef<HTMLDivElement>(null);
+  const finalPreviewRef = useRef<HTMLCanvasElement>(null);
   const mediaRef = useRef<HTMLImageElement | HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -265,6 +265,128 @@ function App() {
     setIsDragging(null);
   }, []);
 
+  // Render to canvas for preview and download
+  const renderToCanvas = useCallback(async (canvas: HTMLCanvasElement, source: HTMLImageElement | HTMLVideoElement) => {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = source instanceof HTMLVideoElement ? source.videoWidth : source.naturalWidth;
+    const height = source instanceof HTMLVideoElement ? source.videoHeight : source.naturalHeight;
+
+    canvas.width = width;
+    canvas.height = height;
+
+    // Draw media
+    ctx.drawImage(source, 0, 0, width, height);
+
+    // Draw logo if exists
+    if (logoFile && logoPreview) {
+      const logoImg = new Image();
+      logoImg.crossOrigin = 'anonymous';
+      await new Promise<void>((resolve, reject) => {
+        logoImg.onload = () => resolve();
+        logoImg.onerror = () => reject(new Error('Gagal memuat logo'));
+        logoImg.src = logoPreview;
+      });
+
+      const logoSize = Math.min(width, height) * 0.15 * logoSettings.scale;
+      const logoX = (logoSettings.x / 100) * width;
+      const logoY = (logoSettings.y / 100) * height;
+
+      ctx.save();
+      ctx.globalAlpha = logoSettings.opacity;
+      ctx.translate(logoX, logoY);
+      ctx.rotate((logoSettings.rotation * Math.PI) / 180);
+      ctx.scale(logoSettings.flipH ? -1 : 1, logoSettings.flipV ? -1 : 1);
+      ctx.drawImage(logoImg, -logoSize / 2, -logoSize / 2, logoSize, logoSize);
+      ctx.restore();
+    }
+
+    // Draw text
+    const lines = getTextLines();
+    if (pendampingan && lokasi) {
+      const font = FONT_OPTIONS[selectedFont];
+      const relativeFontSize = Math.max(20, (textSettings.fontSize / 300) * width);
+      const lineHeight = relativeFontSize * textSettings.lineSpacing;
+      const totalHeight = lines.length * lineHeight;
+      const startY = (textPosition.y / 100) * height - totalHeight / 2 + lineHeight * 0.8;
+
+      const textAlign = textSettings.alignment;
+      let textX: number;
+      if (textAlign === 'left') {
+        textX = width * 0.1;
+        ctx.textAlign = 'left';
+      } else if (textAlign === 'right') {
+        textX = width * 0.9;
+        ctx.textAlign = 'right';
+      } else {
+        textX = (textPosition.x / 100) * width;
+        ctx.textAlign = 'center';
+      }
+
+      ctx.textBaseline = 'top';
+      ctx.font = `bold ${relativeFontSize}px "${font.name}", sans-serif`;
+
+      lines.forEach((line, index) => {
+        const y = startY + index * lineHeight;
+
+        // Shadow
+        if (textSettings.shadow) {
+          ctx.save();
+          ctx.globalAlpha = textSettings.shadowOpacity;
+          ctx.shadowColor = textSettings.shadowColor;
+          ctx.shadowBlur = textSettings.shadowBlur * (width / 300);
+          ctx.shadowOffsetX = 2;
+          ctx.shadowOffsetY = 2;
+          ctx.fillStyle = textSettings.shadowColor;
+          ctx.fillText(line, textX, y);
+          ctx.restore();
+        }
+
+        // Outline
+        if (textSettings.outline) {
+          ctx.save();
+          ctx.strokeStyle = textSettings.outlineColor;
+          ctx.lineWidth = textSettings.outlineWidth * (width / 500);
+          ctx.lineJoin = 'round';
+          ctx.strokeText(line, textX, y);
+          ctx.restore();
+        }
+
+        // Fill text
+        ctx.save();
+        ctx.globalAlpha = textSettings.opacity;
+        ctx.fillStyle = selectedColor;
+        ctx.fillText(line, textX, y);
+        ctx.restore();
+      });
+    }
+  }, [logoFile, logoPreview, logoSettings, pendampingan, lokasi, getTextLines, selectedFont, textSettings, textPosition, selectedColor]);
+
+  // Update final preview canvas
+  useEffect(() => {
+    if (!mediaPreview || !finalPreviewRef.current || !mediaRef.current) return;
+
+    const updatePreview = async () => {
+      const source = mediaRef.current;
+      if (!source) return;
+
+      if (mediaType === 'image') {
+        const img = source as HTMLImageElement;
+        if (img.complete && img.naturalWidth > 0) {
+          await renderToCanvas(finalPreviewRef.current!, img);
+        }
+      } else if (mediaType === 'video' && source instanceof HTMLVideoElement) {
+        const video = source;
+        if (video.readyState >= 2) {
+          await renderToCanvas(finalPreviewRef.current!, video);
+        }
+      }
+    };
+
+    updatePreview();
+  }, [mediaPreview, mediaType, renderToCanvas]);
+
   // Download image
   const downloadImage = useCallback(async () => {
     if (!mediaFile || !mediaPreview || !canvasRef.current) return;
@@ -273,11 +395,6 @@ function App() {
     setDownloadSuccess(false);
 
     try {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Canvas context tidak tersedia');
-
-      // Load image
       const img = new Image();
       img.crossOrigin = 'anonymous';
       await new Promise<void>((resolve, reject) => {
@@ -286,98 +403,10 @@ function App() {
         img.src = mediaPreview;
       });
 
-      // Draw image
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
+      await renderToCanvas(canvasRef.current, img);
 
-      // Draw logo if exists
-      if (logoFile && logoPreview) {
-        const logoImg = new Image();
-        logoImg.crossOrigin = 'anonymous';
-        await new Promise<void>((resolve, reject) => {
-          logoImg.onload = () => resolve();
-          logoImg.onerror = () => reject(new Error('Gagal memuat logo'));
-          logoImg.src = logoPreview;
-        });
-
-        const logoSize = Math.min(img.width, img.height) * 0.15 * logoSettings.scale;
-        const logoX = (logoSettings.x / 100) * img.width;
-        const logoY = (logoSettings.y / 100) * img.height;
-
-        ctx.save();
-        ctx.globalAlpha = logoSettings.opacity;
-        ctx.translate(logoX, logoY);
-        ctx.rotate((logoSettings.rotation * Math.PI) / 180);
-        ctx.scale(logoSettings.flipH ? -1 : 1, logoSettings.flipV ? -1 : 1);
-        ctx.drawImage(logoImg, -logoSize / 2, -logoSize / 2, logoSize, logoSize);
-        ctx.restore();
-      }
-
-      // Draw text
-      const lines = getTextLines();
-      if (pendampingan && lokasi) {
-        const font = FONT_OPTIONS[selectedFont];
-        const relativeFontSize = Math.max(20, (textSettings.fontSize / 300) * img.width);
-        const lineHeight = relativeFontSize * textSettings.lineSpacing;
-        const totalHeight = lines.length * lineHeight;
-        const startY = (textPosition.y / 100) * img.height - totalHeight / 2 + lineHeight * 0.8;
-
-        const textAlign = textSettings.alignment;
-        let textX: number;
-        if (textAlign === 'left') {
-          textX = img.width * 0.1;
-          ctx.textAlign = 'left';
-        } else if (textAlign === 'right') {
-          textX = img.width * 0.9;
-          ctx.textAlign = 'right';
-        } else {
-          textX = (textPosition.x / 100) * img.width;
-          ctx.textAlign = 'center';
-        }
-
-        ctx.textBaseline = 'top';
-        ctx.font = `bold ${relativeFontSize}px "${font.name}", sans-serif`;
-
-        // Draw each line
-        lines.forEach((line, index) => {
-          const y = startY + index * lineHeight;
-
-          // Shadow
-          if (textSettings.shadow) {
-            ctx.save();
-            ctx.globalAlpha = textSettings.shadowOpacity;
-            ctx.shadowColor = textSettings.shadowColor;
-            ctx.shadowBlur = textSettings.shadowBlur * (img.width / 300);
-            ctx.shadowOffsetX = 2;
-            ctx.shadowOffsetY = 2;
-            ctx.fillStyle = textSettings.shadowColor;
-            ctx.fillText(line, textX, y);
-            ctx.restore();
-          }
-
-          // Outline
-          if (textSettings.outline) {
-            ctx.save();
-            ctx.strokeStyle = textSettings.outlineColor;
-            ctx.lineWidth = textSettings.outlineWidth * (img.width / 500);
-            ctx.lineJoin = 'round';
-            ctx.strokeText(line, textX, y);
-            ctx.restore();
-          }
-
-          // Fill text
-          ctx.save();
-          ctx.globalAlpha = textSettings.opacity;
-          ctx.fillStyle = selectedColor;
-          ctx.fillText(line, textX, y);
-          ctx.restore();
-        });
-      }
-
-      // Convert to blob and download
       const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Gagal membuat file')), 'image/png', 1.0);
+        canvasRef.current!.toBlob((b) => b ? resolve(b) : reject(new Error('Gagal membuat file')), 'image/png', 1.0);
       });
 
       const url = URL.createObjectURL(blob);
@@ -399,9 +428,9 @@ function App() {
     } finally {
       setIsProcessing(false);
     }
-  }, [mediaFile, mediaPreview, logoFile, logoPreview, logoSettings, pendampingan, lokasi, tanggal, getTextLines, selectedFont, textSettings, textPosition, selectedColor]);
+  }, [mediaFile, mediaPreview, pendampingan, lokasi, tanggal, renderToCanvas]);
 
-  // Download video (screenshot approach)
+  // Download video frame
   const downloadVideoFrame = useCallback(async () => {
     if (!mediaPreview || !canvasRef.current || !mediaRef.current) return;
 
@@ -410,96 +439,12 @@ function App() {
 
     try {
       const video = mediaRef.current as HTMLVideoElement;
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Canvas context tidak tersedia');
-
-      // Pause video and capture frame
       video.pause();
 
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      ctx.drawImage(video, 0, 0);
-
-      // Draw logo
-      if (logoFile && logoPreview) {
-        const logoImg = new Image();
-        logoImg.crossOrigin = 'anonymous';
-        await new Promise<void>((resolve, reject) => {
-          logoImg.onload = () => resolve();
-          logoImg.onerror = () => reject(new Error('Gagal memuat logo'));
-          logoImg.src = logoPreview;
-        });
-
-        const logoSize = Math.min(video.videoWidth, video.videoHeight) * 0.15 * logoSettings.scale;
-        const logoX = (logoSettings.x / 100) * video.videoWidth;
-        const logoY = (logoSettings.y / 100) * video.videoHeight;
-
-        ctx.save();
-        ctx.globalAlpha = logoSettings.opacity;
-        ctx.translate(logoX, logoY);
-        ctx.rotate((logoSettings.rotation * Math.PI) / 180);
-        ctx.scale(logoSettings.flipH ? -1 : 1, logoSettings.flipV ? -1 : 1);
-        ctx.drawImage(logoImg, -logoSize / 2, -logoSize / 2, logoSize, logoSize);
-        ctx.restore();
-      }
-
-      // Draw text
-      const lines = getTextLines();
-      if (pendampingan && lokasi) {
-        const font = FONT_OPTIONS[selectedFont];
-        const relativeFontSize = Math.max(20, (textSettings.fontSize / 300) * video.videoWidth);
-        const lineHeight = relativeFontSize * textSettings.lineSpacing;
-        const totalHeight = lines.length * lineHeight;
-        const startY = (textPosition.y / 100) * video.videoHeight - totalHeight / 2 + lineHeight * 0.8;
-
-        const textAlign = textSettings.alignment;
-        let textX: number;
-        if (textAlign === 'left') {
-          textX = video.videoWidth * 0.1;
-          ctx.textAlign = 'left';
-        } else if (textAlign === 'right') {
-          textX = video.videoWidth * 0.9;
-          ctx.textAlign = 'right';
-        } else {
-          textX = (textPosition.x / 100) * video.videoWidth;
-          ctx.textAlign = 'center';
-        }
-
-        ctx.textBaseline = 'top';
-        ctx.font = `bold ${relativeFontSize}px "${font.name}", sans-serif`;
-
-        lines.forEach((line, index) => {
-          const y = startY + index * lineHeight;
-
-          if (textSettings.shadow) {
-            ctx.save();
-            ctx.globalAlpha = textSettings.shadowOpacity;
-            ctx.shadowColor = textSettings.shadowColor;
-            ctx.shadowBlur = textSettings.shadowBlur * (video.videoWidth / 300);
-            ctx.fillStyle = textSettings.shadowColor;
-            ctx.fillText(line, textX, y);
-            ctx.restore();
-          }
-
-          if (textSettings.outline) {
-            ctx.save();
-            ctx.strokeStyle = textSettings.outlineColor;
-            ctx.lineWidth = textSettings.outlineWidth * (video.videoWidth / 500);
-            ctx.strokeText(line, textX, y);
-            ctx.restore();
-          }
-
-          ctx.save();
-          ctx.globalAlpha = textSettings.opacity;
-          ctx.fillStyle = selectedColor;
-          ctx.fillText(line, textX, y);
-          ctx.restore();
-        });
-      }
+      await renderToCanvas(canvasRef.current, video);
 
       const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Gagal membuat file')), 'image/png', 1.0);
+        canvasRef.current!.toBlob((b) => b ? resolve(b) : reject(new Error('Gagal membuat file')), 'image/png', 1.0);
       });
 
       const url = URL.createObjectURL(blob);
@@ -521,7 +466,7 @@ function App() {
     } finally {
       setIsProcessing(false);
     }
-  }, [mediaPreview, logoFile, logoPreview, logoSettings, pendampingan, lokasi, tanggal, getTextLines, selectedFont, textSettings, textPosition, selectedColor]);
+  }, [mediaPreview, pendampingan, lokasi, tanggal, renderToCanvas]);
 
   const handleDownload = useCallback(() => {
     if (mediaType === 'image') {
@@ -575,10 +520,17 @@ function App() {
                 >
                   {mediaType === 'image' ? (
                     <img
+                      ref={mediaRef as React.RefObject<HTMLImageElement>}
                       src={mediaPreview}
                       alt="Preview"
                       className="w-full"
                       draggable={false}
+                      onLoad={() => {
+                        const img = mediaRef.current as HTMLImageElement;
+                        if (img && img.complete && finalPreviewRef.current) {
+                          renderToCanvas(finalPreviewRef.current, img);
+                        }
+                      }}
                     />
                   ) : (
                     <video
@@ -588,6 +540,12 @@ function App() {
                       controls
                       playsInline
                       draggable={false}
+                      onLoadedData={() => {
+                        const video = mediaRef.current as HTMLVideoElement;
+                        if (video && finalPreviewRef.current) {
+                          renderToCanvas(finalPreviewRef.current, video);
+                        }
+                      }}
                     />
                   )}
 
@@ -1163,6 +1121,29 @@ function App() {
             </div>
           )}
         </section>
+
+        {/* Preview Section */}
+        {mediaPreview && (
+          <section className="bg-white rounded-3xl shadow-lg shadow-gray-200/50 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+              <Eye className="w-5 h-5 text-[#FB5EA8]" />
+              <h2 className="font-semibold text-gray-800">Preview Hasil Akhir</h2>
+            </div>
+
+            <div className="p-4">
+              <div className="rounded-2xl overflow-hidden bg-gray-900">
+                <canvas
+                  ref={finalPreviewRef}
+                  className="w-full"
+                  style={{ maxHeight: '400px', objectFit: 'contain' }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 text-center mt-3">
+                Ini adalah hasil akhir yang akan diunduh
+              </p>
+            </div>
+          </section>
+        )}
 
         {/* Download Button */}
         {mediaPreview && (
