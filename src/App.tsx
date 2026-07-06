@@ -4,8 +4,6 @@ import {
   Image,
   Video,
   X,
-  RotateCw,
-  RotateCcw,
   FlipHorizontal,
   FlipVertical,
   Download,
@@ -23,6 +21,7 @@ import {
   Sun,
   Move,
   Eye,
+  AlertCircle,
 } from 'lucide-react';
 
 const FONT_OPTIONS = [
@@ -126,12 +125,14 @@ function App() {
   const [isDragging, setIsDragging] = useState<'text' | 'logo' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
 
   // Refs
   const previewRef = useRef<HTMLDivElement>(null);
   const finalPreviewRef = useRef<HTMLCanvasElement>(null);
   const mediaRef = useRef<HTMLImageElement | HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const logoImgRef = useRef<HTMLImageElement | null>(null);
 
   // Cleanup URLs on unmount
   useEffect(() => {
@@ -140,6 +141,20 @@ function App() {
       if (logoPreview) URL.revokeObjectURL(logoPreview);
     };
   }, []);
+
+  // Load logo image once
+  useEffect(() => {
+    if (logoPreview) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = logoPreview;
+      img.onload = () => {
+        logoImgRef.current = img;
+      };
+    } else {
+      logoImgRef.current = null;
+    }
+  }, [logoPreview]);
 
   // Media upload handler
   const handleMediaUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -265,30 +280,11 @@ function App() {
     setIsDragging(null);
   }, []);
 
-  // Render to canvas for preview and download
-  const renderToCanvas = useCallback(async (canvas: HTMLCanvasElement, source: HTMLImageElement | HTMLVideoElement) => {
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const width = source instanceof HTMLVideoElement ? source.videoWidth : source.naturalWidth;
-    const height = source instanceof HTMLVideoElement ? source.videoHeight : source.naturalHeight;
-
-    canvas.width = width;
-    canvas.height = height;
-
-    // Draw media
-    ctx.drawImage(source, 0, 0, width, height);
-
+  // Draw overlays on canvas
+  const drawOverlays = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
     // Draw logo if exists
-    if (logoFile && logoPreview) {
-      const logoImg = new Image();
-      logoImg.crossOrigin = 'anonymous';
-      await new Promise<void>((resolve, reject) => {
-        logoImg.onload = () => resolve();
-        logoImg.onerror = () => reject(new Error('Gagal memuat logo'));
-        logoImg.src = logoPreview;
-      });
-
+    if (logoImgRef.current) {
+      const logoImg = logoImgRef.current;
       const logoSize = Math.min(width, height) * 0.15 * logoSettings.scale;
       const logoX = (logoSettings.x / 100) * width;
       const logoY = (logoSettings.y / 100) * height;
@@ -361,7 +357,25 @@ function App() {
         ctx.restore();
       });
     }
-  }, [logoFile, logoPreview, logoSettings, pendampingan, lokasi, getTextLines, selectedFont, textSettings, textPosition, selectedColor]);
+  }, [logoSettings, pendampingan, lokasi, getTextLines, selectedFont, textSettings, textPosition, selectedColor]);
+
+  // Render to canvas for preview
+  const renderToCanvas = useCallback(async (canvas: HTMLCanvasElement, source: HTMLImageElement | HTMLVideoElement) => {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = source instanceof HTMLVideoElement ? source.videoWidth : source.naturalWidth;
+    const height = source instanceof HTMLVideoElement ? source.videoHeight : source.naturalHeight;
+
+    canvas.width = width;
+    canvas.height = height;
+
+    // Draw media
+    ctx.drawImage(source, 0, 0, width, height);
+
+    // Draw overlays
+    drawOverlays(ctx, width, height);
+  }, [drawOverlays]);
 
   // Update final preview canvas
   useEffect(() => {
@@ -393,6 +407,7 @@ function App() {
 
     setIsProcessing(true);
     setDownloadSuccess(false);
+    setProcessingProgress(0);
 
     try {
       const img = new Image();
@@ -403,11 +418,24 @@ function App() {
         img.src = mediaPreview;
       });
 
-      await renderToCanvas(canvasRef.current, img);
+      setProcessingProgress(50);
+
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas context tidak tersedia');
+
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+      drawOverlays(ctx, img.width, img.height);
+
+      setProcessingProgress(80);
 
       const blob = await new Promise<Blob>((resolve, reject) => {
-        canvasRef.current!.toBlob((b) => b ? resolve(b) : reject(new Error('Gagal membuat file')), 'image/png', 1.0);
+        canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Gagal membuat file')), 'image/png', 1.0);
       });
+
+      setProcessingProgress(90);
 
       const url = URL.createObjectURL(blob);
       const fileName = `Pendampingan_${pendampingan}_${lokasi.replace(/\s+/g, '_')}_${tanggal}.png`;
@@ -420,35 +448,156 @@ function App() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
+      setProcessingProgress(100);
       setDownloadSuccess(true);
-      setTimeout(() => setDownloadSuccess(false), 3000);
+      setTimeout(() => {
+        setDownloadSuccess(false);
+        setProcessingProgress(0);
+      }, 3000);
     } catch (error) {
       console.error('Download error:', error);
       alert('Terjadi kesalahan. Silakan coba lagi.');
     } finally {
       setIsProcessing(false);
     }
-  }, [mediaFile, mediaPreview, pendampingan, lokasi, tanggal, renderToCanvas]);
+  }, [mediaFile, mediaPreview, pendampingan, lokasi, tanggal, drawOverlays]);
 
-  // Download video frame
-  const downloadVideoFrame = useCallback(async () => {
-    if (!mediaPreview || !canvasRef.current || !mediaRef.current) return;
+  // Download video with overlays
+  const downloadVideo = useCallback(async () => {
+    if (!mediaPreview || !mediaRef.current) return;
+
+    const videoElement = mediaRef.current as HTMLVideoElement;
+    if (!videoElement) return;
 
     setIsProcessing(true);
     setDownloadSuccess(false);
+    setProcessingProgress(0);
 
     try {
-      const video = mediaRef.current as HTMLVideoElement;
-      video.pause();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas context tidak tersedia');
 
-      await renderToCanvas(canvasRef.current, video);
+      const width = videoElement.videoWidth;
+      const height = videoElement.videoHeight;
+      canvas.width = width;
+      canvas.height = height;
 
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvasRef.current!.toBlob((b) => b ? resolve(b) : reject(new Error('Gagal membuat file')), 'image/png', 1.0);
+      // Create a new video element for processing
+      const video = document.createElement('video');
+      video.src = mediaPreview;
+      video.muted = true;
+      video.playsInline = true;
+
+      await new Promise<void>((resolve, reject) => {
+        video.onloadeddata = () => resolve();
+        video.onerror = () => reject(new Error('Gagal memuat video'));
       });
 
+      const duration = video.duration;
+      const fps = 30;
+      const totalFrames = Math.floor(duration * fps);
+
+      // Check for supported MIME type
+      let mimeType = 'video/webm;codecs=vp9';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'video/webm;codecs=vp8';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = 'video/webm';
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'video/mp4';
+          }
+        }
+      }
+
+      const stream = canvas.captureStream(fps);
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 5000000,
+      });
+
+      const chunks: Blob[] = [];
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      // Start recording
+      video.currentTime = 0;
+      await new Promise<void>((resolve) => {
+        video.onseeked = () => resolve();
+        video.currentTime = 0;
+      });
+
+      mediaRecorder.start();
+      video.play();
+
+      // Process frames
+      let processedFrames = 0;
+      const processFrame = async () => {
+        if (video.ended || video.paused) return;
+
+        ctx.drawImage(video, 0, 0, width, height);
+        drawOverlays(ctx, width, height);
+
+        processedFrames++;
+        const progress = Math.min(95, Math.round((processedFrames / totalFrames) * 100));
+        setProcessingProgress(progress);
+
+        if (!video.ended && video.currentTime < duration) {
+          await new Promise<void>((resolve) => {
+            video.onseeked = () => resolve();
+            const nextTime = video.currentTime + 1 / fps;
+            if (nextTime < duration) {
+              video.currentTime = nextTime;
+            } else {
+              resolve();
+            }
+          });
+          if (!video.ended) {
+            requestAnimationFrame(processFrame);
+          }
+        }
+      };
+
+      await new Promise<void>((resolve) => {
+        video.onended = async () => {
+          // Continue processing remaining frames
+          while (processedFrames < totalFrames * 0.99) {
+            ctx.drawImage(video, 0, 0, width, height);
+            drawOverlays(ctx, width, height);
+            processedFrames++;
+            setProcessingProgress(Math.min(95, Math.round((processedFrames / totalFrames) * 100)));
+          }
+          resolve();
+        };
+        video.play();
+        processFrame();
+      });
+
+      // Wait for video to finish
+      await new Promise<void>((resolve) => {
+        if (video.ended) {
+          resolve();
+        } else {
+          video.onended = () => resolve();
+        }
+      });
+
+      setProcessingProgress(96);
+
+      // Stop recording
+      mediaRecorder.stop();
+
+      await new Promise<void>((resolve) => {
+        mediaRecorder.onstop = resolve;
+      });
+
+      setProcessingProgress(98);
+
+      // Create download
+      const blob = new Blob(chunks, { type: mimeType });
       const url = URL.createObjectURL(blob);
-      const fileName = `Pendampingan_${pendampingan}_${lokasi.replace(/\s+/g, '_')}_${tanggal}.png`;
+      const fileName = `Pendampingan_${pendampingan}_${lokasi.replace(/\s+/g, '_')}_${tanggal}.${mimeType.includes('mp4') ? 'mp4' : 'webm'}`;
 
       const a = document.createElement('a');
       a.href = url;
@@ -458,23 +607,27 @@ function App() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
+      setProcessingProgress(100);
       setDownloadSuccess(true);
-      setTimeout(() => setDownloadSuccess(false), 3000);
+      setTimeout(() => {
+        setDownloadSuccess(false);
+        setProcessingProgress(0);
+      }, 3000);
     } catch (error) {
-      console.error('Download error:', error);
-      alert('Terjadi kesalahan. Silakan coba lagi.');
+      console.error('Video download error:', error);
+      alert('Terjadi kesalahan saat memproses video. Silakan coba lagi.\n\nJika masalah berlanjut, coba gunakan gambar sebagai gantinya.');
     } finally {
       setIsProcessing(false);
     }
-  }, [mediaPreview, pendampingan, lokasi, tanggal, renderToCanvas]);
+  }, [mediaPreview, pendampingan, lokasi, tanggal, drawOverlays]);
 
   const handleDownload = useCallback(() => {
     if (mediaType === 'image') {
       downloadImage();
     } else if (mediaType === 'video') {
-      downloadVideoFrame();
+      downloadVideo();
     }
-  }, [mediaType, downloadImage, downloadVideoFrame]);
+  }, [mediaType, downloadImage, downloadVideo]);
 
   const isFormValid = pendampingan.trim() !== '' && lokasi.trim() !== '';
 
@@ -539,10 +692,17 @@ function App() {
                       className="w-full"
                       controls
                       playsInline
+                      muted
                       draggable={false}
                       onLoadedData={() => {
                         const video = mediaRef.current as HTMLVideoElement;
                         if (video && finalPreviewRef.current) {
+                          renderToCanvas(finalPreviewRef.current, video);
+                        }
+                      }}
+                      onTimeUpdate={() => {
+                        const video = mediaRef.current as HTMLVideoElement;
+                        if (video && finalPreviewRef.current && !isProcessing) {
                           renderToCanvas(finalPreviewRef.current, video);
                         }
                       }}
@@ -1147,35 +1307,57 @@ function App() {
 
         {/* Download Button */}
         {mediaPreview && (
-          <button
-            onClick={handleDownload}
-            disabled={isProcessing || !isFormValid}
-            className={`w-full py-4 rounded-2xl font-semibold text-lg flex items-center justify-center gap-3 transition-all ${isProcessing
-              ? 'bg-gray-400 cursor-not-allowed'
-              : downloadSuccess
-                ? 'bg-green-500 text-white'
-                : !isFormValid
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-[#FB5EA8] text-white hover:bg-pink-600 active:scale-[0.98] shadow-xl shadow-pink-200/50'
-              }`}
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Memproses...
-              </>
-            ) : downloadSuccess ? (
-              <>
-                <CheckCircle className="w-5 h-5" />
-                Berhasil! File Terunduh
-              </>
-            ) : (
-              <>
-                <Download className="w-5 h-5" />
-                Download Hasil
-              </>
+          <>
+            <button
+              onClick={handleDownload}
+              disabled={isProcessing || !isFormValid}
+              className={`w-full py-4 rounded-2xl font-semibold text-lg flex items-center justify-center gap-3 transition-all ${isProcessing
+                ? 'bg-gray-400 cursor-not-allowed'
+                : downloadSuccess
+                  ? 'bg-green-500 text-white'
+                  : !isFormValid
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-[#FB5EA8] text-white hover:bg-pink-600 active:scale-[0.98] shadow-xl shadow-pink-200/50'
+                }`}
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Memproses... {processingProgress}%
+                </>
+              ) : downloadSuccess ? (
+                <>
+                  <CheckCircle className="w-5 h-5" />
+                  Berhasil! File Terunduh
+                </>
+              ) : (
+                <>
+                  <Download className="w-5 h-5" />
+                  Download Hasil
+                </>
+              )}
+            </button>
+
+            {/* Progress Bar */}
+            {isProcessing && (
+              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-[#FB5EA8] to-pink-400 transition-all duration-300"
+                  style={{ width: `${processingProgress}%` }}
+                />
+              </div>
             )}
-          </button>
+
+            {/* Video processing note */}
+            {mediaType === 'video' && !isProcessing && (
+              <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-xl">
+                <AlertCircle className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-blue-700">
+                  Video akan diproses dengan overlay teks dan logo. Durasi video akan mempengaruhi waktu proses.
+                </p>
+              </div>
+            )}
+          </>
         )}
 
         {!isFormValid && mediaPreview && (
